@@ -365,36 +365,222 @@ function Result() {
         </div>
       )}
 
-      {/* Video Solutions */}
-      {solutions.length > 0 && (
-        <div className="rounded-2xl border bg-card p-5">
-          <h2 className="mb-1 flex items-center gap-2 font-display text-lg font-bold">
-            <PlayCircle className="h-5 w-5 text-primary" /> Video Solutions Available
-          </h2>
-          <p className="mb-3 text-xs text-muted-foreground">Watch recorded explanations for this test.</p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {solutions.map((s, i) => (
-              <a
-                key={i}
-                href={s.questions.solution_video_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 rounded-xl border bg-background p-3 transition hover:border-primary/40 hover:bg-primary/5"
-              >
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-sm font-bold text-primary">
-                  Q{s.questions.order_index}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium capitalize">
-                    {s.questions.chapter || s.questions.subject}
-                  </span>
-                  <span className={`text-xs ${s.is_correct ? "text-success" : s.selected_option ? "text-destructive" : "text-muted-foreground"}`}>
-                    {s.is_correct ? "Correct" : s.selected_option ? "Incorrect" : "Not attempted"} · Answer ({s.questions.correct_option})
-                  </span>
-                </span>
-                <PlayCircle className="h-5 w-5 shrink-0 text-primary" />
-              </a>
-            ))}
+      {/* Detailed Question-by-Question Review */}
+      {review.length > 0 && (
+        <div className="rounded-2xl border bg-card p-5 space-y-4 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
+            <div>
+              <h2 className="font-display text-lg font-bold flex items-center gap-2">
+                <Target className="h-5 w-5 text-primary" /> Question-by-Question Detailed Review
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Review all {review.length} questions, your selected choices, correct answers, and full step-by-step solutions.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-semibold text-muted-foreground mr-1">Filter:</span>
+              <span className="rounded-lg bg-success/10 text-success text-xs font-bold px-2.5 py-1">
+                ✓ {attempt.correct_count} Correct
+              </span>
+              <span className="rounded-lg bg-destructive/10 text-destructive text-xs font-bold px-2.5 py-1">
+                ✗ {attempt.wrong_count} Wrong
+              </span>
+              <span className="rounded-lg bg-muted text-muted-foreground text-xs font-bold px-2.5 py-1">
+                — {attempt.unattempted_count} Skipped
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-6 pt-2">
+            {review.map((item, idx) => {
+              const q = item.questions;
+              const isCorrect = item.is_correct === true;
+              const isWrong = item.selected_option && !isCorrect;
+              const isSkipped = !item.selected_option;
+              const letters = ["A", "B", "C", "D"];
+              const timeM = Math.floor((item.time_spent_seconds || 0) / 60);
+              const timeS = (item.time_spent_seconds || 0) % 60;
+
+              let opts: Array<{ key: string; text: string; image_url?: string }> = [];
+              if (Array.isArray(q.options)) {
+                opts = letters.map((k, i) => {
+                  const match = (q.options as any[]).find((o: any) => o?.key === k);
+                  if (match) return { key: k, text: match.text || `Option ${k}`, image_url: match.image_url };
+                  const raw = (q.options as any[])[i];
+                  return { key: k, text: typeof raw === "string" ? raw : `Option ${k}` };
+                });
+              }
+
+              return (
+                <div
+                  key={q.id || idx}
+                  className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+                    isCorrect
+                      ? "border-success/30 bg-success/5"
+                      : isWrong
+                      ? "border-destructive/30 bg-destructive/5"
+                      : "border-border bg-card"
+                  }`}
+                >
+                  {/* Question header */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/40 px-4 py-3">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <span className="grid h-7 w-7 place-items-center rounded-lg bg-background text-xs font-bold shadow-xs border">
+                        Q{q.order_index}
+                      </span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                        {q.subject}{q.chapter ? ` · ${q.chapter}` : ""}
+                      </span>
+                      {item.time_spent_seconds > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground font-medium bg-background px-2 py-0.5 rounded-md border">
+                          <Clock className="h-3 w-3 text-muted-foreground" /> {timeM > 0 ? `${timeM}m ${timeS}s` : `${timeS}s`}
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${
+                          isCorrect
+                            ? "bg-success/15 text-success border border-success/30"
+                            : isWrong
+                            ? "bg-destructive/15 text-destructive border border-destructive/30"
+                            : "bg-muted text-muted-foreground border border-border"
+                        }`}
+                      >
+                        {isCorrect ? "Correct (+4)" : isWrong ? "Incorrect (-1)" : "Not Attempted (0)"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 sm:p-5 space-y-4">
+                    {/* Question text */}
+                    {q.question_text && (
+                      <p className="text-sm font-medium text-foreground leading-relaxed whitespace-pre-wrap">
+                        {q.question_text}
+                      </p>
+                    )}
+
+                    {/* Question image */}
+                    {q.question_image_url && (
+                      <div className="rounded-xl border bg-background p-2 overflow-hidden max-w-2xl">
+                        <img
+                          src={q.question_image_url}
+                          alt={`Question ${q.order_index}`}
+                          className="max-h-[420px] w-auto max-w-full rounded-lg object-contain"
+                          loading="lazy"
+                        />
+                      </div>
+                    )}
+
+                    {/* Options list */}
+                    {opts.length > 0 && (
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {opts.map((op) => {
+                          const isCorrectOpt = q.correct_option === op.key;
+                          const isStudentOpt = item.selected_option === op.key;
+                          const isWrongStudentOpt = isStudentOpt && !isCorrectOpt;
+
+                          return (
+                            <div
+                              key={op.key}
+                              className={`flex items-start gap-3 rounded-xl border p-3 text-left transition-all ${
+                                isCorrectOpt
+                                  ? "border-success bg-success/15 ring-2 ring-success/30 font-semibold"
+                                  : isWrongStudentOpt
+                                  ? "border-destructive bg-destructive/15 ring-2 ring-destructive/30"
+                                  : "border-border bg-background"
+                              }`}
+                            >
+                              <span
+                                className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg text-xs font-bold border ${
+                                  isCorrectOpt
+                                    ? "bg-success text-white border-success"
+                                    : isWrongStudentOpt
+                                    ? "bg-destructive text-white border-destructive"
+                                    : "bg-secondary text-foreground"
+                                }`}
+                              >
+                                {op.key}
+                              </span>
+
+                              <div className="min-w-0 flex-1 pt-0.5 text-xs sm:text-sm">
+                                {op.image_url && (
+                                  <img src={op.image_url} alt={`Option ${op.key}`} className="max-h-32 rounded mb-1" />
+                                )}
+                                <span>{op.text}</span>
+                                {isCorrectOpt && (
+                                  <span className="block mt-1 text-[11px] font-bold text-success">
+                                    ✓ Correct Option
+                                  </span>
+                                )}
+                                {isWrongStudentOpt && (
+                                  <span className="block mt-1 text-[11px] font-bold text-destructive">
+                                    ✗ Your Selected Answer
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Quick status bar */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-background border p-3 text-xs">
+                      <div className="flex items-center gap-4">
+                        <span>
+                          Your Answer:{" "}
+                          <b className={isCorrect ? "text-success" : isWrong ? "text-destructive" : "text-muted-foreground"}>
+                            {item.selected_option ? `Option (${item.selected_option})` : "Skipped"}
+                          </b>
+                        </span>
+                        <span>
+                          Correct Answer: <b className="text-success">Option ({q.correct_option})</b>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Explanation / Solution block */}
+                    {(q.solution_text || q.solution_image_url || q.solution_video_url) && (
+                      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+                        <div className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                          <BookOpen className="h-4 w-4" /> Explanation & Solution
+                        </div>
+
+                        {q.solution_text && (
+                          <p className="text-xs sm:text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                            {q.solution_text}
+                          </p>
+                        )}
+
+                        {q.solution_image_url && (
+                          <div className="rounded-xl border bg-background p-2 overflow-hidden max-w-2xl">
+                            <img
+                              src={q.solution_image_url}
+                              alt={`Solution ${q.order_index}`}
+                              className="max-h-80 w-auto max-w-full rounded-lg object-contain"
+                              loading="lazy"
+                            />
+                          </div>
+                        )}
+
+                        {q.solution_video_url && (
+                          <a
+                            href={q.solution_video_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 rounded-xl bg-primary text-primary-foreground px-3.5 py-2 text-xs font-semibold hover:bg-primary/90 transition shadow-xs"
+                          >
+                            <PlayCircle className="h-4 w-4" /> Watch Video Solution on YouTube
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

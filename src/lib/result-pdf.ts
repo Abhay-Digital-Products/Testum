@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import logoAsset from "@/assets/testum-logo.png.asset.json";
+import { fetchImageBase64 } from "@/lib/image-proxy.functions";
 
 /* ─── Types ──────────────────────────────────────────── */
 type RGB = [number, number, number];
@@ -63,33 +64,109 @@ const INDIGO_BD: RGB  = [199, 210, 254]; // Indigo 200
 
 const WHITE: RGB      = [255, 255, 255];
 
-/* ─── Utilities ──────────────────────────────────────── */
+/* ─── Robust Image Loader with Fallbacks ─────────────── */
+
+/**
+ * Loads an image from URL using 3 strategies:
+ * 1. Direct fetch -> Blob -> DataURL
+ * 2. HTML Image element + Canvas
+ * 3. Server-side proxy function (bypasses browser CORS completely)
+ */
 async function toDataUrl(url: string): Promise<string | null> {
+  if (!url || typeof url !== "string") return null;
+  if (url.startsWith("data:")) return url;
+
+  // Strategy 1: Direct fetch
   try {
     const res = await fetch(url, { mode: "cors" });
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
+    if (res.ok) {
+      const blob = await res.blob();
+      const b64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      if (b64 && b64.startsWith("data:")) return b64;
+    }
+  } catch {
+    // Continue to next strategy
+  }
+
+  // Strategy 2: Image element with canvas conversion
+  try {
+    const canvasData = await new Promise<string>((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth || 600;
+          canvas.height = img.naturalHeight || 400;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return reject(new Error("No canvas context"));
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL("image/jpeg", 0.92));
+        } catch (err) {
+          reject(err);
+        }
+      };
+      img.onerror = reject;
+      img.src = url;
     });
-  } catch { return null; }
+    if (canvasData) return canvasData;
+  } catch {
+    // Continue to server proxy strategy
+  }
+
+  // Strategy 3: Server proxy fallback (always works, no browser CORS restriction)
+  try {
+    const proxied = await fetchImageBase64({ data: { url } });
+    if (proxied && proxied.startsWith("data:")) return proxied;
+  } catch (err) {
+    console.warn("Server proxy image fetch failed:", url, err);
+  }
+
+  return null;
 }
 
-async function loadImage(url: string): Promise<{ data: string; w: number; h: number } | null> {
+async function loadImage(url: string): Promise<{ data: string; w: number; h: number; format: string } | null> {
   const data = await toDataUrl(url);
   if (!data) return null;
+
   try {
-    const dims = await new Promise<{ w: number; h: number }>((resolve, reject) => {
+    return await new Promise<{ data: string; w: number; h: number; format: string }>((resolve, reject) => {
       const img = new Image();
-      img.onload = () => resolve({ w: img.naturalWidth || 600, h: img.naturalHeight || 400 });
+      img.onload = () => {
+        const w = img.naturalWidth || 600;
+        const h = img.naturalHeight || 400;
+        try {
+          // Standardize through canvas to JPEG for bulletproof jsPDF compatibility
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0);
+            const jpegData = canvas.toDataURL("image/jpeg", 0.92);
+            resolve({ data: jpegData, w, h, format: "JPEG" });
+            return;
+          }
+        } catch {
+          // Fallback to original data URL if canvas is tainted
+        }
+        resolve({ data, w, h, format: data.includes("image/png") ? "PNG" : "JPEG" });
+      };
       img.onerror = reject;
       img.src = data;
     });
-    return { data, ...dims };
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 async function loadLogo(): Promise<string | null> {
@@ -106,7 +183,7 @@ export async function downloadResultPdf(input: ResultPdfInput) {
 
   const logo = await loadLogo();
 
-  /* ensure enough space remains on page; otherwise add new page */
+  /* Ensure enough space remains on page; otherwise add new page */
   const ensure = (need: number) => {
     if (y + need > H - 52) {
       doc.addPage();
@@ -115,7 +192,7 @@ export async function downloadResultPdf(input: ResultPdfInput) {
     }
   };
 
-  /* subtle off-white background every page */
+  /* Subtle off-white background every page */
   const drawPageBg = () => {
     doc.setFillColor(252, 253, 255);
     doc.rect(0, 0, W, H, "F");
@@ -124,7 +201,6 @@ export async function downloadResultPdf(input: ResultPdfInput) {
   drawPageBg();
 
   /* ── 1. HEADER BANNER ───────────────────────────────── */
-  // Gradient-style: two layered rects
   doc.setFillColor(...PRIMARY);
   doc.rect(0, 0, W, 88, "F");
   doc.setFillColor(...PRIMARY_L);
@@ -132,7 +208,7 @@ export async function downloadResultPdf(input: ResultPdfInput) {
   doc.rect(W * 0.55, 0, W * 0.45, 88, "F");
   doc.setGState(doc.GState({ opacity: 1 }));
 
-  // Decorative circle accent top-right
+  // Decorative circle accents
   doc.setFillColor(...WHITE);
   doc.setGState(doc.GState({ opacity: 0.07 }));
   doc.circle(W - 30, -10, 80, "F");
@@ -153,12 +229,12 @@ export async function downloadResultPdf(input: ResultPdfInput) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(199, 220, 255);
-  doc.text("Performance & Diagnostic Analysis Report", txtX, 55);
+  doc.text("Official Performance & Diagnostic Analysis Report", txtX, 55);
 
   doc.setFontSize(7.5);
   doc.setTextColor(179, 206, 255);
   doc.text("Generated: " + new Date(input.submittedAt || Date.now()).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }), W - M, 42, { align: "right" });
-  doc.text("testum.in  ·  NEET 2027 Pattern", W - M, 56, { align: "right" });
+  doc.text("testum.in  ·  NEET Exam Simulation", W - M, 56, { align: "right" });
 
   y = 105;
 
@@ -260,7 +336,6 @@ export async function downloadResultPdf(input: ResultPdfInput) {
   /* ── Helper: Section Heading ────────────────────────── */
   const heading = (text: string, color: RGB = PRIMARY) => {
     ensure(38);
-    // Colored left accent + background strip
     doc.setFillColor(...color);
     doc.roundedRect(M, y - 2, 4, 18, 2, 2, "F");
     doc.setFillColor(color[0], color[1], color[2]);
@@ -432,12 +507,6 @@ export async function downloadResultPdf(input: ResultPdfInput) {
       const acc = att ? Math.round((s.correct / att) * 100) : 0;
       const barColor: RGB = acc >= 75 ? GREEN : acc >= 50 ? AMBER : RED;
 
-      // Alternating row bg
-      if (subjectEntries.indexOf([name, s]) % 2 === 0) {
-        doc.setFillColor(...LIGHT_BG);
-        doc.rect(M, y - 7, W - M * 2, 20, "F");
-      }
-
       doc.setFont("helvetica", "bold");
       doc.setFontSize(8.5);
       doc.setTextColor(...DARK);
@@ -519,7 +588,7 @@ export async function downloadResultPdf(input: ResultPdfInput) {
 
     doc.setFontSize(8);
     doc.setTextColor(...GREY);
-    paragraph(`All ${qs.length} questions with your response, correct answer highlighted, and step-by-step solutions.`);
+    paragraph(`All ${qs.length} questions with question images, your response, verified correct options, and step-by-step explanations.`);
 
     for (const q of qs) {
       const isCorrect  = q.is_correct === true;
@@ -534,12 +603,11 @@ export async function downloadResultPdf(input: ResultPdfInput) {
       ensure(80);
 
       /* ── Q Header strip ── */
-      // Background
       doc.setFillColor(...statusColor);
       doc.setGState(doc.GState({ opacity: 0.09 }));
       doc.roundedRect(M, y - 6, W - M * 2, 26, 5, 5, "F");
       doc.setGState(doc.GState({ opacity: 1 }));
-      // Left accent
+
       doc.setFillColor(...statusColor);
       doc.roundedRect(M, y - 6, 5, 26, 4, 4, "F");
 
@@ -557,12 +625,12 @@ export async function downloadResultPdf(input: ResultPdfInput) {
       const truncated = doc.splitTextToSize(subjLabel, W - M * 2 - 220)[0] ?? "";
       doc.text(truncated, M + 36, y + 10);
 
-      // Time spent (centre-right)
+      // Time spent
       doc.setFontSize(7);
       doc.setTextColor(...GREY_L);
       doc.text(`⏱ ${timeStr}`, W - M - 90, y + 10);
 
-      // Status badge (far right)
+      // Status badge
       doc.setFont("helvetica", "bold");
       doc.setFontSize(7.5);
       doc.setTextColor(...statusColor);
@@ -578,7 +646,7 @@ export async function downloadResultPdf(input: ResultPdfInput) {
         paragraph(q.question_text);
       }
 
-      /* ── Question Image (full width, capped height) ── */
+      /* ── Question Image (Full width, auto aspect ratio) ── */
       if (q.question_image_url) {
         const img = await loadImage(q.question_image_url);
         if (img) {
@@ -588,14 +656,12 @@ export async function downloadResultPdf(input: ResultPdfInput) {
           const capH  = Math.min(rawH, 280);
           const capW  = rawH > 280 ? (img.w / img.h) * capH : maxW;
           ensure(capH + 14);
-          try { doc.addImage(img.data, M, y, capW, capH); } catch { /* skip */ }
+          try {
+            doc.addImage(img.data, img.format || "JPEG", M, y, capW, capH);
+          } catch (e) {
+            console.warn("jsPDF addImage failed for question", q.order_index, e);
+          }
           y += capH + 10;
-        } else {
-          // show URL as fallback
-          doc.setFontSize(7);
-          doc.setTextColor(...GREY_L);
-          doc.text("[Image could not be loaded]", M + 8, y);
-          y += 12;
         }
       }
 
@@ -638,7 +704,6 @@ export async function downloadResultPdf(input: ResultPdfInput) {
           const rowH   = lines.length * 12 + 12;
 
           ensure(rowH + 4);
-          // draw background box for highlighted options
           if (bg) {
             doc.setFillColor(...bg);
             doc.setDrawColor(...bd);
@@ -680,11 +745,9 @@ export async function downloadResultPdf(input: ResultPdfInput) {
       doc.text(summaryParts.join("   |   "), M + 10, y + 8);
       y += 24;
 
-
       /* ── Solution ── */
       if (q.solution_text || q.solution_image_url || q.solution_video_url) {
         ensure(28);
-        // Solution heading bar
         doc.setFillColor(...INDIGO_BG);
         doc.setDrawColor(...INDIGO_BD);
         doc.roundedRect(M, y - 3, W - M * 2, 20, 5, 5, "FD");
@@ -710,7 +773,11 @@ export async function downloadResultPdf(input: ResultPdfInput) {
             const sh  = Math.min((sImg.h / sImg.w) * sw, 240);
             const fsw = sh < (sImg.h / sImg.w) * sw ? (sImg.w / sImg.h) * sh : sw;
             ensure(sh + 14);
-            try { doc.addImage(sImg.data, M + 8, y, fsw, sh); } catch { /* skip */ }
+            try {
+              doc.addImage(sImg.data, sImg.format || "JPEG", M + 8, y, fsw, sh);
+            } catch (e) {
+              console.warn("jsPDF addImage failed for solution", q.order_index, e);
+            }
             y += sh + 10;
           }
         }
@@ -738,7 +805,6 @@ export async function downloadResultPdf(input: ResultPdfInput) {
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p);
 
-    // Footer bar
     doc.setFillColor(...PRIMARY);
     doc.setGState(doc.GState({ opacity: 0.07 }));
     doc.rect(0, H - 38, W, 38, "F");
