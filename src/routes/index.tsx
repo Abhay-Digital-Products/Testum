@@ -110,9 +110,12 @@ function Home() {
   const [activePlans, setActivePlans] = useState<any[]>([]);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }: any) => {
-      if (data?.user) setUser(data.user);
-    });
+    supabase.auth.getUser()
+      .then(({ data }: any) => {
+        if (data?.user) setUser(data.user);
+      })
+      .catch(() => {});
+
     const { data: sub } = supabase.auth.onAuthStateChange((_event: string, session: any) => {
       setUser(session?.user ?? null);
     });
@@ -126,7 +129,8 @@ function Home() {
         if (data && data.length > 0) {
           setActivePlans(data);
         }
-      });
+      })
+      .catch(() => {});
 
     supabase
       .from("tests")
@@ -135,9 +139,14 @@ function Home() {
       .then(({ data }: any) => {
         const freeOnly = (data ?? []).filter((t: any) => !t.test_series?.plan_code || t.test_series?.plan_code === "free");
         setFreeTests(freeOnly);
-      });
+      })
+      .catch(() => {});
 
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      if (sub?.subscription?.unsubscribe) {
+        sub.subscription.unsubscribe();
+      }
+    };
   }, []);
 
   // Compute live prices dynamically from Supabase plans

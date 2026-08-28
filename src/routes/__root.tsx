@@ -105,7 +105,11 @@ function RootComponent() {
       router.invalidate();
       if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
     });
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      if (sub?.subscription?.unsubscribe) {
+        sub.subscription.unsubscribe();
+      }
+    };
   }, [queryClient, router]);
   return (
     <QueryClientProvider client={queryClient}>
