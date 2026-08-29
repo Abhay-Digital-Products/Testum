@@ -64,124 +64,183 @@ const INDIGO_BD: RGB  = [199, 210, 254]; // Indigo 200
 
 const WHITE: RGB      = [255, 255, 255];
 
-/* ─── Robust Image Loader with Fallbacks ─────────────── */
+/* ─── High-Performance Parallel Image Loader & Cache ───────── */
+type LoadedImage = { data: string; w: number; h: number; format: string };
+const globalImageCache = new Map<string, LoadedImage>();
+const MAX_PDF_IMAGES = 24;
 
-/**
- * Loads an image from URL using 3 strategies:
- * 1. Direct fetch -> Blob -> DataURL
- * 2. HTML Image element + Canvas
- * 3. Server-side proxy function (bypasses browser CORS completely)
- */
-async function toDataUrl(url: string): Promise<string | null> {
-  if (!url || typeof url !== "string") return null;
-  if (url.startsWith("data:")) return url;
+function normalizeOptionKey(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const text = String(value).trim();
+  if (!text) return null;
+  const matched = text.match(/[A-D]/i);
+  return matched ? matched[0].toUpperCase() : null;
+}
 
-  // Strategy 1: Direct fetch
-  try {
-    const res = await fetch(url, { mode: "cors" });
-    if (res.ok) {
-      const blob = await res.blob();
-      const b64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-      if (b64 && b64.startsWith("data:")) return b64;
-    }
-  } catch {
-    // Continue to next strategy
-  }
+function extractSelectedOption(answer: any): string | null {
+  const candidates = [
+    answer?.selected_option,
+    answer?.selectedOption,
+    answer?.option_key,
+    answer?.optionKey,
+    answer?.answer,
+    answer?.user_answer,
+    answer?.answer_option,
+    answer?.choice,
+  ];
 
-  // Strategy 2: Image element with canvas conversion
-  try {
-    const canvasData = await new Promise<string>((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        try {
-          const canvas = document.createElement("canvas");
-          canvas.width = img.naturalWidth || 600;
-          canvas.height = img.naturalHeight || 400;
-          const ctx = canvas.getContext("2d");
-          if (!ctx) return reject(new Error("No canvas context"));
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(img, 0, 0);
-          resolve(canvas.toDataURL("image/jpeg", 0.92));
-        } catch (err) {
-          reject(err);
-        }
-      };
-      img.onerror = reject;
-      img.src = url;
-    });
-    if (canvasData) return canvasData;
-  } catch {
-    // Continue to server proxy strategy
-  }
-
-  // Strategy 3: Server proxy fallback (always works, no browser CORS restriction)
-  try {
-    const proxied = await fetchImageBase64({ data: { url } });
-    if (proxied && proxied.startsWith("data:")) return proxied;
-  } catch (err) {
-    console.warn("Server proxy image fetch failed:", url, err);
+  for (const candidate of candidates) {
+    const normalized = normalizeOptionKey(candidate);
+    if (normalized) return normalized;
   }
 
   return null;
 }
 
-async function loadImage(url: string): Promise<{ data: string; w: number; h: number; format: string } | null> {
-  const data = await toDataUrl(url);
-  if (!data) return null;
-
-  try {
-    return await new Promise<{ data: string; w: number; h: number; format: string }>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const w = img.naturalWidth || 600;
-        const h = img.naturalHeight || 400;
-        try {
-          // Standardize through canvas to JPEG for bulletproof jsPDF compatibility
-          const canvas = document.createElement("canvas");
-          canvas.width = w;
-          canvas.height = h;
-          const ctx = canvas.getContext("2d");
-          if (ctx) {
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, w, h);
-            ctx.drawImage(img, 0, 0);
-            const jpegData = canvas.toDataURL("image/jpeg", 0.92);
-            resolve({ data: jpegData, w, h, format: "JPEG" });
-            return;
-          }
-        } catch {
-          // Fallback to original data URL if canvas is tainted
-        }
-        resolve({ data, w, h, format: data.includes("image/png") ? "PNG" : "JPEG" });
-      };
-      img.onerror = reject;
-      img.src = data;
-    });
-  } catch {
-    return null;
-  }
+function hasAttemptedAnswer(question: QuestionReview): boolean {
+  const selected = normalizeOptionKey(question.selected_option);
+  if (selected) return true;
+  return question.is_correct !== null && question.is_correct !== undefined;
 }
 
-async function loadLogo(): Promise<string | null> {
-  return toDataUrl(logoAsset.url);
+async function fetchSingleImageWithTimeout(url: string, timeoutMs = 1800): Promise<LoadedImage | null> {
+  if (!url || typeof url !== "string") return null;
+  if (globalImageCache.has(url)) return globalImageCache.get(url)!;
+
+  const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs));
+
+  const loadTask = async (): Promise<LoadedImage | null> => {
+    // 1. Direct Image Element + Canvas (fastest & browser cached)
+    try {
+      const res = await new Promise<LoadedImage | null>((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          try {
+            const w = img.naturalWidth || 600;
+            const h = img.naturalHeight || 400;
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.min(w, 680);
+            canvas.height = Math.round((h / w) * canvas.width) || h;
+            const ctx = canvas.getContext("2d");
+            if (ctx) {
+              ctx.fillStyle = "#ffffff";
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              const jpeg = canvas.toDataURL("image/jpeg", 0.85);
+              resolve({ data: jpeg, w: canvas.width, h: canvas.height, format: "JPEG" });
+              return;
+            }
+          } catch {
+            // Canvas security or CORS restriction
+          }
+          resolve(null);
+        };
+        img.onerror = () => resolve(null);
+        img.src = url;
+      });
+      if (res) return res;
+    } catch {}
+
+    // 2. Direct fetch with AbortController
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 1800);
+      const res = await fetch(url, { mode: "cors", signal: controller.signal });
+      clearTimeout(timer);
+      if (res.ok) {
+        const blob = await res.blob();
+        const b64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        if (b64 && b64.startsWith("data:")) {
+          const img = new Image();
+          const meta = await new Promise<{ w: number; h: number }>((resolve) => {
+            img.onload = () => resolve({ w: img.naturalWidth || 600, h: img.naturalHeight || 400 });
+            img.onerror = () => resolve({ w: 600, h: 400 });
+            img.src = b64;
+          });
+          return { data: b64, w: meta.w, h: meta.h, format: b64.includes("png") ? "PNG" : "JPEG" };
+        }
+      }
+    } catch {}
+
+    // 3. Server Proxy fallback for cross-origin restricted URLs
+    try {
+      const proxied = await fetchImageBase64({ data: { url } });
+      if (proxied && proxied.startsWith("data:")) {
+        const img = new Image();
+        const meta = await new Promise<{ w: number; h: number }>((resolve) => {
+          img.onload = () => resolve({ w: img.naturalWidth || 600, h: img.naturalHeight || 400 });
+          img.onerror = () => resolve({ w: 600, h: 400 });
+          img.src = proxied;
+        });
+        return { data: proxied, w: meta.w, h: meta.h, format: "JPEG" };
+      }
+    } catch {}
+
+    return null;
+  };
+
+  const result = await Promise.race([loadTask(), timeoutPromise]);
+  if (result) {
+    globalImageCache.set(url, result);
+  }
+  return result;
+}
+
+/**
+ * Prefetches all test images in parallel batches with concurrency control
+ */
+async function prefetchAllImages(urls: string[]): Promise<Map<string, LoadedImage>> {
+  const uniqueUrls = Array.from(new Set(urls.filter((u) => Boolean(u) && typeof u === "string")));
+  const results = new Map<string, LoadedImage>();
+  const concurrency = 12;
+
+  for (let i = 0; i < uniqueUrls.length; i += concurrency) {
+    const chunk = uniqueUrls.slice(i, i + concurrency);
+    const loadedChunk = await Promise.all(
+      chunk.map(async (u) => {
+        const img = await fetchSingleImageWithTimeout(u);
+        return { url: u, img };
+      })
+    );
+    for (const item of loadedChunk) {
+      if (item.img) results.set(item.url, item.img);
+    }
+  }
+
+  return results;
 }
 
 /* ─── Main PDF Function ───────────────────────────────── */
 export async function downloadResultPdf(input: ResultPdfInput) {
+  // 1. Collect all unique image URLs upfront for parallel prefetching, but cap the count to keep PDF generation responsive.
+  const allUrls: string[] = [];
+  if (logoAsset?.url) allUrls.push(logoAsset.url);
+
+  for (const q of input.questions ?? []) {
+    if (q.question_image_url) allUrls.push(q.question_image_url);
+    if (q.solution_image_url) allUrls.push(q.solution_image_url);
+    if (Array.isArray(q.options)) {
+      for (const opt of q.options as any[]) {
+        if (opt?.image_url) allUrls.push(opt.image_url);
+      }
+    }
+  }
+
+  const uniqueUrls = Array.from(new Set(allUrls.filter(Boolean))).slice(0, MAX_PDF_IMAGES);
+  const imageMap = await prefetchAllImages(uniqueUrls);
+  const logo = logoAsset?.url ? imageMap.get(logoAsset.url) ?? null : null;
+
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const W = doc.internal.pageSize.getWidth();  // 595.28
   const H = doc.internal.pageSize.getHeight(); // 841.89
   const M = 36;
   let y = 0;
-
-  const logo = await loadLogo();
 
   /* Ensure enough space remains on page; otherwise add new page */
   const ensure = (need: number) => {
@@ -217,7 +276,7 @@ export async function downloadResultPdf(input: ResultPdfInput) {
 
   // Logo
   if (logo) {
-    try { doc.addImage(logo, "PNG", M, 17, 50, 50); } catch { /* ignore */ }
+    try { doc.addImage(logo.data, logo.format || "PNG", M, 17, 50, 50); } catch { /* ignore */ }
   }
 
   const txtX = M + (logo ? 62 : 0);
@@ -265,15 +324,19 @@ export async function downloadResultPdf(input: ResultPdfInput) {
 
   /* ── 3. PRIMARY METRIC CARDS ────────────────────────── */
   const computedCorrect = (input.questions ?? []).filter((q) => {
-    const s = q.selected_option ? String(q.selected_option).trim().toUpperCase() : null;
-    const c = q.correct_option ? String(q.correct_option).trim().toUpperCase() : "";
-    return s && (q.is_correct === true || s === c);
+    const attempted = hasAttemptedAnswer(q);
+    if (!attempted) return false;
+    const s = normalizeOptionKey(q.selected_option) ?? normalizeOptionKey(q.correct_option);
+    const c = normalizeOptionKey(q.correct_option) ?? "";
+    return q.is_correct === true || s === c;
   }).length;
 
   const computedWrong = (input.questions ?? []).filter((q) => {
-    const s = q.selected_option ? String(q.selected_option).trim().toUpperCase() : null;
-    const c = q.correct_option ? String(q.correct_option).trim().toUpperCase() : "";
-    return s && !(q.is_correct === true || s === c);
+    const attempted = hasAttemptedAnswer(q);
+    if (!attempted) return false;
+    const s = normalizeOptionKey(q.selected_option) ?? normalizeOptionKey(q.correct_option);
+    const c = normalizeOptionKey(q.correct_option) ?? "";
+    return q.is_correct === false || (s !== null && !(q.is_correct === true || s === c));
   }).length;
 
   const computedUnattempted = (input.questions ?? []).length - computedCorrect - computedWrong;
@@ -611,11 +674,12 @@ export async function downloadResultPdf(input: ResultPdfInput) {
     paragraph(`All ${qs.length} questions with question images, your response, verified correct options, and step-by-step explanations.`);
 
     for (const q of qs) {
-      const selected = q.selected_option ? String(q.selected_option).trim().toUpperCase() : null;
-      const correctOpt = q.correct_option ? String(q.correct_option).trim().toUpperCase() : "";
-      const isSkipped  = !selected;
-      const isCorrect  = !isSkipped && (q.is_correct === true || selected === correctOpt);
-      const isWrong    = !isSkipped && !isCorrect;
+      const selected = normalizeOptionKey(q.selected_option);
+      const correctOpt = normalizeOptionKey(q.correct_option) ?? "";
+      const hasAttempted = hasAttemptedAnswer(q);
+      const isSkipped  = !hasAttempted;
+      const isCorrect  = hasAttempted && (q.is_correct === true || (!!selected && selected === correctOpt));
+      const isWrong    = hasAttempted && !isCorrect;
       const statusColor: RGB = isCorrect ? GREEN : isWrong ? RED : GREY;
       const statusLabel      = isCorrect ? "CORRECT  (+4)" : isWrong ? "WRONG  (-1)" : "NOT ATTEMPTED  (0)";
       const timeStr          = q.time_spent_seconds && q.time_spent_seconds > 0
@@ -670,7 +734,7 @@ export async function downloadResultPdf(input: ResultPdfInput) {
 
       /* ── Question Image (Full width, auto aspect ratio) ── */
       if (q.question_image_url) {
-        const img = await loadImage(q.question_image_url);
+        const img = imageMap.get(q.question_image_url);
         if (img) {
           const maxW = W - M * 2;
           const scale = maxW / img.w;
@@ -710,7 +774,7 @@ export async function downloadResultPdf(input: ResultPdfInput) {
         y += 10;
 
         for (const opt of optionsList) {
-          const optKey = opt.key.toUpperCase();
+          const optKey = normalizeOptionKey(opt.key) ?? "";
           const isOptCorrect = correctOpt === optKey;
           const isOptChosen  = selected === optKey;
           const isWrongChoice = isOptChosen && !isOptCorrect;
@@ -747,7 +811,7 @@ export async function downloadResultPdf(input: ResultPdfInput) {
           y += rowH + 3;
 
           if (opt.image_url) {
-            const optImg = await loadImage(opt.image_url);
+            const optImg = imageMap.get(opt.image_url);
             if (optImg) {
               const oMaxW = Math.min(W - M * 2 - 28, 220);
               const oH = Math.min((optImg.h / optImg.w) * oMaxW, 100);
@@ -809,7 +873,7 @@ export async function downloadResultPdf(input: ResultPdfInput) {
         }
 
         if (q.solution_image_url) {
-          const sImg = await loadImage(q.solution_image_url);
+          const sImg = imageMap.get(q.solution_image_url);
           if (sImg) {
             const sw  = Math.min(W - M * 2 - 8, 360);
             const sh  = Math.min((sImg.h / sImg.w) * sw, 240);

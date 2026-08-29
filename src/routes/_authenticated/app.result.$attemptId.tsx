@@ -17,6 +17,61 @@ export const Route = createFileRoute("/_authenticated/app/result/$attemptId")({
   component: Result,
 });
 
+const normalizeOptionKey = (value: unknown): string | null => {
+  if (value === null || value === undefined) return null;
+  const text = String(value).trim();
+  if (!text) return null;
+  const matched = text.match(/[A-D]/i);
+  return matched ? matched[0].toUpperCase() : null;
+};
+
+const extractSelectedOption = (answer: any): string | null => {
+  const candidates = [
+    answer?.selected_option,
+    answer?.selectedOption,
+    answer?.option_key,
+    answer?.optionKey,
+    answer?.answer,
+    answer?.user_answer,
+    answer?.answer_option,
+    answer?.choice,
+  ];
+
+  for (const candidate of candidates) {
+    const normalized = normalizeOptionKey(candidate);
+    if (normalized) return normalized;
+  }
+
+  return null;
+};
+
+const hasAttemptedAnswer = (answer: any): boolean => {
+  if (!answer) return false;
+  const selected = extractSelectedOption(answer);
+  if (selected) return true;
+
+  const status = String(answer?.status ?? "").toLowerCase();
+  return status === "answered" || status === "answered_marked";
+};
+
+const getOptionText = (options: unknown, key: string) => {
+  if (!Array.isArray(options)) return `Option ${key}`;
+  const normalizedKey = normalizeOptionKey(key);
+  const match = options.find((option: any) => normalizeOptionKey(option?.key) === normalizedKey);
+  if (match) {
+    if (typeof match?.text === "string" && match.text.trim()) return match.text;
+    if (typeof match?.label === "string" && match.label.trim()) return match.label;
+    if (typeof match?.value === "string" && match.value.trim()) return match.value;
+    return `Option ${key}`;
+  }
+  for (const raw of options) {
+    if (typeof raw === "string" && raw.trim()) return raw;
+    if (raw && typeof raw.text === "string" && raw.text.trim()) return raw.text;
+    if (raw && typeof raw.label === "string" && raw.label.trim()) return raw.label;
+  }
+  return `Option ${key}`;
+};
+
 function Result() {
   const { attemptId } = Route.useParams();
   const runAi = useServerFn(generateAiAnalysis);
@@ -68,18 +123,22 @@ function Result() {
     // Merge: every question gets an entry with accurate attempt evaluation
     const merged = allQRows.map((q: any) => {
       const ans = answerMap.get(q.id);
-      const selected = ans?.selected_option ? String(ans.selected_option).trim() : null;
+      const selected = extractSelectedOption(ans);
+      const attempted = hasAttemptedAnswer(ans);
+      const correct = normalizeOptionKey(q.correct_option);
       let isCorrect: boolean | null = null;
-      if (selected) {
+      if (attempted) {
         if (ans?.is_correct !== undefined && ans?.is_correct !== null) {
-          isCorrect = ans.is_correct;
-        } else {
-          isCorrect = selected.toUpperCase() === String(q.correct_option || "").trim().toUpperCase();
+          isCorrect = Boolean(ans.is_correct);
+        } else if (selected) {
+          isCorrect = selected === correct;
         }
       }
       return {
         is_correct: isCorrect,
         selected_option: selected,
+        correct_option: correct,
+        has_attempted: attempted,
         time_spent_seconds: ans?.time_spent_seconds ?? 0,
         questions: q,
       };
@@ -128,8 +187,8 @@ function Result() {
   const totalMax = totalQuestions * marksPerCorrect;
 
   const derivedCorrect = review.filter((r: any) => r.is_correct === true).length;
-  const derivedWrong = review.filter((r: any) => Boolean(r.selected_option) && r.is_correct === false).length;
-  const derivedUnattempted = review.filter((r: any) => !r.selected_option).length;
+  const derivedWrong = review.filter((r: any) => r.has_attempted && r.is_correct === false).length;
+  const derivedUnattempted = review.filter((r: any) => !r.has_attempted).length;
   const hasDerived = (derivedCorrect > 0 || derivedWrong > 0) && (attempt?.correct_count === 0 || attempt?.correct_count === undefined) && (attempt?.wrong_count === 0 || attempt?.wrong_count === undefined);
 
   const finalCorrect = hasDerived ? derivedCorrect : (attempt?.correct_count ?? derivedCorrect);
@@ -176,7 +235,7 @@ function Result() {
           question_image_url: r.questions.question_image_url,
           option_type: r.questions.option_type,
           options: r.questions.options,
-          correct_option: r.questions.correct_option,
+          correct_option: normalizeOptionKey(r.questions.correct_option) ?? r.questions.correct_option,
           selected_option: r.selected_option ?? null,
           is_correct: r.is_correct ?? null,
           time_spent_seconds: r.time_spent_seconds ?? 0,
@@ -432,8 +491,8 @@ function Result() {
             {review.map((item, idx) => {
               const q = item.questions;
               const isCorrect = item.is_correct === true;
-              const isWrong = item.selected_option && !isCorrect;
-              const isSkipped = !item.selected_option;
+              const isWrong = item.is_correct === false;
+              const isSkipped = item.is_correct === null;
               const letters = ["A", "B", "C", "D"];
               const timeM = Math.floor((item.time_spent_seconds || 0) / 60);
               const timeS = (item.time_spent_seconds || 0) % 60;
@@ -441,10 +500,12 @@ function Result() {
               let opts: Array<{ key: string; text: string; image_url?: string }> = [];
               if (Array.isArray(q.options)) {
                 opts = letters.map((k, i) => {
-                  const match = (q.options as any[]).find((o: any) => o?.key === k);
-                  if (match) return { key: k, text: match.text || `Option ${k}`, image_url: match.image_url };
+                  const match = (q.options as any[]).find((o: any) => normalizeOptionKey(o?.key) === normalizeOptionKey(k));
+                  if (match) return { key: k, text: typeof match.text === "string" && match.text.trim() ? match.text : getOptionText(q.options, k), image_url: match.image_url };
                   const raw = (q.options as any[])[i];
-                  return { key: k, text: typeof raw === "string" ? raw : `Option ${k}` };
+                  if (typeof raw === "string") return { key: k, text: raw };
+                  if (raw && typeof raw.text === "string" && raw.text.trim()) return { key: k, text: raw.text, image_url: raw.image_url };
+                  return { key: k, text: getOptionText(q.options, k) };
                 });
               }
 
@@ -513,8 +574,8 @@ function Result() {
                     {opts.length > 0 && (
                       <div className="grid gap-2 sm:grid-cols-2">
                         {opts.map((op) => {
-                          const isCorrectOpt = q.correct_option === op.key;
-                          const isStudentOpt = item.selected_option === op.key;
+                          const isCorrectOpt = normalizeOptionKey(q.correct_option) === normalizeOptionKey(op.key);
+                          const isStudentOpt = normalizeOptionKey(item.selected_option) === normalizeOptionKey(op.key);
                           const isWrongStudentOpt = isStudentOpt && !isCorrectOpt;
 
                           return (
@@ -568,26 +629,89 @@ function Result() {
                       </div>
                     )}
 
-                    {/* Quick status bar */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-background border p-3 text-xs">
-                      <div className="flex items-center gap-4">
-                        <span>
-                          Your Answer:{" "}
-                          <b className={isCorrect ? "text-success" : isWrong ? "text-destructive" : "text-muted-foreground"}>
-                            {item.selected_option ? `Option (${item.selected_option})` : "Skipped"}
-                          </b>
-                        </span>
-                        <span>
-                          Correct Answer: <b className="text-success">Option ({q.correct_option})</b>
-                        </span>
+                    {/* Analysis & Verdict Section */}
+                    <div className={`rounded-2xl border-2 p-4 sm:p-5 space-y-4 ${
+                      isCorrect
+                        ? "border-success/50 bg-success/5"
+                        : isWrong
+                        ? "border-destructive/50 bg-destructive/5"
+                        : "border-amber/50 bg-amber/5"
+                    }`}>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          {isCorrect ? (
+                            <>
+                              <CheckCircle2 className="h-6 w-6 text-success" />
+                              <div>
+                                <div className="font-bold text-success text-sm">✓ CORRECT ANSWER</div>
+                                <div className="text-xs text-muted-foreground">You answered this question correctly</div>
+                              </div>
+                            </>
+                          ) : isWrong ? (
+                            <>
+                              <XCircle className="h-6 w-6 text-destructive" />
+                              <div>
+                                <div className="font-bold text-destructive text-sm">✗ INCORRECT ANSWER</div>
+                                <div className="text-xs text-muted-foreground">You selected the wrong option</div>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <MinusCircle className="h-6 w-6 text-amber-600" />
+                              <div>
+                                <div className="font-bold text-amber-600 text-sm">— NOT ATTEMPTED</div>
+                                <div className="text-xs text-muted-foreground">You skipped this question</div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-black">
+                            {isCorrect ? "+4" : isWrong ? "-1" : "0"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">marks</div>
+                        </div>
+                      </div>
+
+                      {/* Your Answer vs Correct Answer Comparison */}
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className={`rounded-lg border p-3 space-y-2 ${
+                          item.selected_option && isWrong
+                            ? "border-destructive/30 bg-destructive/10"
+                            : item.selected_option
+                            ? "border-success/30 bg-success/10"
+                            : "border-amber-300/30 bg-amber-100/10"
+                        }`}>
+                          <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                            {item.selected_option ? (isWrong ? "Your Wrong Answer" : "Your Answer") : "Your Response"}
+                          </div>
+                          <div className="text-lg font-bold">
+                            {item.selected_option ? (
+                              <span className={isWrong ? "text-destructive" : "text-success"}>
+                                Option ({item.selected_option})
+                              </span>
+                            ) : (
+                              <span className="text-amber-600">Skipped</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="rounded-lg border border-success/30 bg-success/10 p-3 space-y-2">
+                          <div className="text-xs font-bold uppercase tracking-wider text-success">
+                            Correct Answer
+                          </div>
+                          <div className="text-lg font-bold text-success">
+                            Option ({normalizeOptionKey(q.correct_option) ?? q.correct_option ?? "-"})
+                          </div>
+                        </div>
                       </div>
                     </div>
 
                     {/* Explanation / Solution block */}
                     {(q.solution_text || q.solution_image_url || q.solution_video_url) && (
-                      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
-                        <div className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
-                          <BookOpen className="h-4 w-4" /> Explanation & Solution
+                      <div className="rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary/8 via-primary/5 to-primary/8 p-4 sm:p-5 space-y-4">
+                        <div className="text-sm font-bold uppercase tracking-wider text-primary flex items-center gap-2">
+                          <BookOpen className="h-5 w-5" /> Step-by-Step Explanation & Solution
                         </div>
 
                         {q.solution_text && (
