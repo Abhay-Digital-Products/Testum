@@ -19,7 +19,7 @@ const signUpSchema = z.object({
   studentClass: z.enum(["11th", "12th", "dropper"], { message: "Select your class" }),
 });
 
-export function AuthDialog({ trigger, defaultOpen, defaultTab = "signin" }: { trigger?: React.ReactNode; defaultOpen?: boolean; defaultTab?: "signin" | "signup" }) {
+export function AuthDialog({ trigger, defaultOpen, defaultTab = "signin", onOpen }: { trigger?: React.ReactNode; defaultOpen?: boolean; defaultTab?: "signin" | "signup"; onOpen?: () => void }) {
   const [open, setOpen] = useState(!!defaultOpen);
   const [activeTab, setActiveTab] = useState<"signin" | "signup">(defaultTab);
   const router = useRouter();
@@ -34,6 +34,7 @@ export function AuthDialog({ trigger, defaultOpen, defaultTab = "signin" }: { tr
     setOpen(newOpen);
     if (newOpen) {
       setActiveTab(defaultTab);
+      onOpen?.();
     }
   };
 

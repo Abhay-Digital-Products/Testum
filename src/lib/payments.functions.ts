@@ -59,15 +59,21 @@ export const createCheckout = createServerFn({ method: "POST" })
       .or(`user_id.eq.${userId},id.eq.${userId}`)
       .maybeSingle();
 
+    // Try to get the real phone from auth.users via admin client
+    const { supabaseAdmin: adminClient } = await import("@/integrations/supabase/client.server");
+    const { data: authUser } = await adminClient.auth.admin.getUserById(userId);
+
     const userMetadata = (claims as any)?.user_metadata ?? {};
     const rawMobile =
       profile?.mobile ||
+      authUser?.user?.phone ||
       userMetadata.mobile ||
       userMetadata.phone ||
       (claims as any)?.phone ||
       "";
 
-    const phone = rawMobile.replace(/\D/g, "").slice(-10) || "9999999999";
+    // Use empty string if no phone found — Cashfree will prompt user to enter their number
+    const phone = rawMobile.replace(/\D/g, "").slice(-10) || "";
     const customerName =
       profile?.full_name ||
       userMetadata.full_name ||

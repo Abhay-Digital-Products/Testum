@@ -37,7 +37,7 @@ function Privacy() {
           <li>To deliver the tests included in the plan you purchased and to unlock content you are entitled to.</li>
           <li>To save your attempts so you can resume an unfinished test and review results later.</li>
           <li>To generate your performance report, weak-topic analysis and downloadable PDF.</li>
-          <li>To provide support over WhatsApp, Telegram or email when you contact us.</li>
+          <li>To provide support over Telegram or email when you contact us.</li>
         </ul>
       </LegalSection>
       <LegalSection title="4. AI-generated analysis">
@@ -71,7 +71,6 @@ function Privacy() {
         and supervision of a parent or guardian.
       </LegalSection>
       <LegalSection title="11. Contact us">
-        WhatsApp: <a href={SUPPORT.whatsapp} target="_blank" rel="noopener noreferrer">chat with support</a> ·
         Telegram: <a href={SUPPORT.telegram} target="_blank" rel="noopener noreferrer">{SUPPORT.telegramHandle}</a> ·
         Email: <a href={`mailto:${SUPPORT.email}`}>{SUPPORT.email}</a>
       </LegalSection>

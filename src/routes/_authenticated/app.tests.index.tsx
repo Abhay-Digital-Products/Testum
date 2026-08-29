@@ -2,13 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEntitlements, type PlanCode } from "@/hooks/use-entitlements";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TestListSkeleton } from "@/components/skeleton-loaders";
 import {
   Search, Clock, ListChecks, Play, Atom, TestTube2, Sprout, Trophy,
-  CheckCircle2, Lock, Crown, Sparkles, Layers, BookOpen, Calendar, ArrowRight
+  CheckCircle2, Lock, Crown, Layers, BookOpen, Calendar
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/tests/")({
@@ -36,7 +36,7 @@ const TAB_CONFIG = {
   free: {
     title: "100% Free Practice Tests",
     description: "Real NTA exam pattern, timer, question palette & instant performance scorecards without payment.",
-    icon: Sparkles,
+    icon: BookOpen,
     gradient: "from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 text-emerald-700",
     badge: "Free Access",
     badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-300",
@@ -176,43 +176,33 @@ function Tests() {
         )}
       </div>
 
-      {/* Tabs Switcher — horizontal scroll on mobile */}
+      {/* Tabs Switcher */}
       <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
-        <div className="-mx-0 overflow-x-auto no-scrollbar">
-          <TabsList className="flex w-max min-w-full sm:grid sm:grid-cols-4 h-11 p-1 bg-muted/60 rounded-xl border border-border/60">
-            <TabsTrigger
-              value="free"
-              className="flex-1 min-w-[90px] rounded-lg text-xs font-bold transition-all data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-sm text-emerald-700 dark:text-emerald-400"
-            >
-              <Sparkles className="mr-1 h-3 w-3 shrink-0" />
-              Free
-              <span className="ml-1 rounded-full bg-white/20 px-1 text-[10px]">{counts.free}</span>
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="chapter"
-              className="flex-1 min-w-[95px] rounded-lg text-xs font-semibold transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-            >
-              Chapter
-              <span className="ml-1 rounded-full bg-muted px-1 text-[10px] text-muted-foreground">{counts.chapter}</span>
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="part"
-              className="flex-1 min-w-[75px] rounded-lg text-xs font-semibold transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-            >
-              Part
-              <span className="ml-1 rounded-full bg-muted px-1 text-[10px] text-muted-foreground">{counts.part}</span>
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="full"
-              className="flex-1 min-w-[75px] rounded-lg text-xs font-semibold transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-            >
-              Full
-              <span className="ml-1 rounded-full bg-muted px-1 text-[10px] text-muted-foreground">{counts.full}</span>
-            </TabsTrigger>
-          </TabsList>
+        <div className="overflow-x-auto no-scrollbar -mx-1 px-1">
+          <div className="flex gap-2 min-w-max pb-1">
+            {([
+              { key: "free",    label: "Free Test",           count: counts.free,    dot: "bg-emerald-500",  active: "bg-emerald-600 text-white shadow-md shadow-emerald-200 dark:shadow-emerald-900/40",  inactive: "bg-card border border-border text-emerald-700 dark:text-emerald-400 hover:border-emerald-400/60" },
+              { key: "chapter", label: "Chapter Test",        count: counts.chapter, dot: "bg-blue-500",     active: "bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-blue-900/40",              inactive: "bg-card border border-border text-foreground hover:border-blue-400/60" },
+              { key: "part",    label: "Part Test",           count: counts.part,    dot: "bg-amber-500",    active: "bg-amber-500 text-white shadow-md shadow-amber-200 dark:shadow-amber-900/40",            inactive: "bg-card border border-border text-foreground hover:border-amber-400/60" },
+              { key: "full",    label: "Full Syllabus Test",  count: counts.full,    dot: "bg-purple-500",   active: "bg-purple-600 text-white shadow-md shadow-purple-200 dark:shadow-purple-900/40",          inactive: "bg-card border border-border text-foreground hover:border-purple-400/60" },
+            ] as const).map(({ key, label, count, dot, active, inactive }) => (
+              <button
+                key={key}
+                onClick={() => setTab(key as any)}
+                className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-bold whitespace-nowrap transition-all duration-200 ${
+                  tab === key ? active : inactive
+                }`}
+              >
+                <span className={`h-2 w-2 rounded-full shrink-0 ${tab === key ? "bg-white/80" : dot}`} />
+                {label}
+                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                  tab === key ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
+                }`}>
+                  {count}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Dynamic Category Hero Card */}

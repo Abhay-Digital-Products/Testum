@@ -63,7 +63,6 @@ function Terms() {
         We may update these terms. Continued use after an update means you accept the revised terms.
       </LegalSection>
       <LegalSection title="10. Contact">
-        WhatsApp: <a href={SUPPORT.whatsapp} target="_blank" rel="noopener noreferrer">chat with support</a> ·
         Telegram: <a href={SUPPORT.telegram} target="_blank" rel="noopener noreferrer">{SUPPORT.telegramHandle}</a> ·
         Email: <a href={`mailto:${SUPPORT.email}`}>{SUPPORT.email}</a>
       </LegalSection>

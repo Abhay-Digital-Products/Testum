@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   ArrowRight, ShieldCheck, Monitor, BarChart3, CloudUpload, LineChart, FileText,
   BookOpen, Layers, Trophy, Check, CheckCircle2, Star, Zap, CalendarCheck, RefreshCw,
-  FileQuestion, Sparkles, MessageCircle, Send, Mail, Menu, LayoutDashboard,
+  FileQuestion, Sparkles, Send, Mail, Menu, LayoutDashboard,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -222,8 +222,8 @@ function Home() {
                     </Button>
                   ) : (
                     <>
-                      <AuthDialog defaultTab="signin" trigger={<Button variant="outline" size="lg" className="w-full rounded-xl border-slate-200 font-semibold" onClick={() => setMobileOpen(false)}>Log in</Button>} />
-                      <AuthDialog defaultTab="signup" trigger={<Button size="lg" className="w-full rounded-xl bg-primary font-semibold text-primary-foreground" onClick={() => setMobileOpen(false)}>Sign up</Button>} />
+                      <AuthDialog defaultTab="signin" onOpen={() => setMobileOpen(false)} trigger={<Button variant="outline" size="lg" className="w-full rounded-xl border-slate-200 font-semibold">Log in</Button>} />
+                      <AuthDialog defaultTab="signup" onOpen={() => setMobileOpen(false)} trigger={<Button size="lg" className="w-full rounded-xl bg-primary font-semibold text-primary-foreground">Sign up</Button>} />
                     </>
                   )}
                 </div>
@@ -682,7 +682,7 @@ function Home() {
           <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">Questions, answered</span>
           <h2 className="mt-3 font-display text-2xl font-extrabold tracking-tight sm:text-4xl">Everything clear before you begin.</h2>
           <p className="mt-2 text-sm text-slate-600">
-            Still need help? Our support team is one message away on WhatsApp or Telegram.
+            Still need help? Our support team is one message away on Telegram or email.
           </p>
           <Accordion type="single" collapsible className="mt-8 grid gap-3 lg:grid-cols-2">
             {faqs.map((f, i) => (
@@ -723,12 +723,12 @@ function Home() {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <a href={SUPPORT.whatsapp} target="_blank" rel="noopener noreferrer"
+              <a href={`mailto:${SUPPORT.email}`}
                 className="flex items-center gap-3 rounded-2xl bg-white/10 p-4 transition hover:bg-white/20">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/15"><MessageCircle className="h-5 w-5" /></span>
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/15"><Mail className="h-5 w-5" /></span>
                 <span className="min-w-0">
-                  <span className="block text-sm font-bold">WhatsApp support</span>
-                  <span className="block truncate text-xs opacity-85">Chat with us instantly</span>
+                  <span className="block text-sm font-bold">Email support</span>
+                  <span className="block truncate text-xs opacity-85">{SUPPORT.email}</span>
                 </span>
               </a>
               <a href={SUPPORT.telegram} target="_blank" rel="noopener noreferrer"
@@ -769,7 +769,7 @@ function Home() {
             <div className="text-[11px] font-bold uppercase tracking-wider text-white">Company</div>
             <ul className="mt-3 space-y-2 text-xs">
               <li><Link to="/auth" className="hover:text-primary">Sign in</Link></li>
-              <li><a href={SUPPORT.whatsapp} target="_blank" rel="noopener noreferrer" className="hover:text-primary">WhatsApp support</a></li>
+              <li><a href={`mailto:${SUPPORT.email}`} className="hover:text-primary">Email support</a></li>
               <li><a href={SUPPORT.telegram} target="_blank" rel="noopener noreferrer" className="hover:text-primary">Telegram {SUPPORT.telegramHandle}</a></li>
               <li><a href={`mailto:${SUPPORT.email}`} className="inline-flex items-center gap-1 hover:text-primary"><Mail className="h-3 w-3" />{SUPPORT.email}</a></li>
             </ul>
