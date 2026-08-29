@@ -106,6 +106,22 @@ function Result() {
     }
   };
 
+  useEffect(() => {
+    load();
+    /* eslint-disable-next-line */
+  }, [attemptId]);
+
+  if (!attempt) {
+    return (
+      <div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="font-semibold text-foreground">Loading result diagnostics...</p>
+        </div>
+      </div>
+    );
+  }
+
   const totalQuestions = attempt?.tests?.total_questions ?? review.length ?? 180;
   const marksPerCorrect = attempt?.tests?.marks_correct ?? 4;
   const marksPerWrong = attempt?.tests?.marks_wrong ?? -1;
@@ -114,12 +130,12 @@ function Result() {
   const derivedCorrect = review.filter((r: any) => r.is_correct === true).length;
   const derivedWrong = review.filter((r: any) => Boolean(r.selected_option) && r.is_correct === false).length;
   const derivedUnattempted = review.filter((r: any) => !r.selected_option).length;
-  const hasDerived = (derivedCorrect > 0 || derivedWrong > 0) && attempt.correct_count === 0 && attempt.wrong_count === 0;
+  const hasDerived = (derivedCorrect > 0 || derivedWrong > 0) && (attempt?.correct_count === 0 || attempt?.correct_count === undefined) && (attempt?.wrong_count === 0 || attempt?.wrong_count === undefined);
 
-  const finalCorrect = hasDerived ? derivedCorrect : (attempt.correct_count ?? derivedCorrect);
-  const finalWrong = hasDerived ? derivedWrong : (attempt.wrong_count ?? derivedWrong);
-  const finalUnattempted = hasDerived ? derivedUnattempted : (attempt.unattempted_count ?? derivedUnattempted);
-  const finalScore = hasDerived ? (finalCorrect * marksPerCorrect + finalWrong * marksPerWrong) : Number(attempt.score ?? 0);
+  const finalCorrect = hasDerived ? derivedCorrect : (attempt?.correct_count ?? derivedCorrect);
+  const finalWrong = hasDerived ? derivedWrong : (attempt?.wrong_count ?? derivedWrong);
+  const finalUnattempted = hasDerived ? derivedUnattempted : (attempt?.unattempted_count ?? derivedUnattempted);
+  const finalScore = hasDerived ? (finalCorrect * marksPerCorrect + finalWrong * marksPerWrong) : Number(attempt?.score ?? 0);
 
   const attempted = finalCorrect + finalWrong;
   const total = attempted + finalUnattempted;
@@ -137,15 +153,15 @@ function Result() {
       await downloadResultPdf({
         studentName: profile?.full_name ?? "Testum Student",
         studentClass: profile?.student_class ?? null,
-        testTitle: attempt.tests?.title ?? "Mock Test",
-        submittedAt: attempt.submitted_at,
+        testTitle: attempt?.tests?.title ?? "Mock Test",
+        submittedAt: attempt?.submitted_at ?? new Date().toISOString(),
         score: finalScore,
         totalMax,
         correct: finalCorrect,
         wrong: finalWrong,
         unattempted: finalUnattempted,
-        timeSpentSeconds: attempt.time_spent_seconds ?? 0,
-        durationMinutes: attempt.tests?.duration_minutes ?? 180,
+        timeSpentSeconds: attempt?.time_spent_seconds ?? 0,
+        durationMinutes: attempt?.tests?.duration_minutes ?? 180,
         subjects: an?.subject_breakdown?.subjects ?? {},
         chapters: an?.subject_breakdown?.chapters ?? {},
         aiSummary: an?.ai_summary ?? null,
@@ -177,10 +193,6 @@ function Result() {
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [attemptId]);
-
-  if (!attempt) return <div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground"><Loader2 className="h-6 w-6 animate-spin text-primary mr-2" /> Loading result diagnostics...</div>;
-
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
       {/* Top action bar */}
@@ -197,9 +209,9 @@ function Result() {
       {/* Hero Score Banner */}
       <div className="rounded-3xl border bg-hero p-6 sm:p-8 text-primary-foreground shadow-elegant">
         <div className="text-xs font-semibold uppercase tracking-wider opacity-85">
-          NEET Performance Report · Submitted {new Date(attempt.submitted_at).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+          NEET Performance Report · Submitted {attempt?.submitted_at ? new Date(attempt.submitted_at).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "Recently"}
         </div>
-        <h1 className="mt-1 font-display text-2xl font-extrabold sm:text-3xl">{attempt.tests?.title}</h1>
+        <h1 className="mt-1 font-display text-2xl font-extrabold sm:text-3xl">{attempt?.tests?.title ?? "NEET Test"}</h1>
         <p className="text-xs opacity-90 mt-0.5">Student: {profile?.full_name ?? "Student"}{profile?.student_class ? " · " + profile.student_class : ""}</p>
 
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -403,15 +415,15 @@ function Result() {
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-semibold text-muted-foreground mr-1">Filter:</span>
+              <span className="text-xs font-semibold text-muted-foreground mr-1">Overview:</span>
               <span className="rounded-lg bg-success/10 text-success text-xs font-bold px-2.5 py-1">
-                ✓ {attempt.correct_count} Correct
+                ✓ {finalCorrect} Correct
               </span>
               <span className="rounded-lg bg-destructive/10 text-destructive text-xs font-bold px-2.5 py-1">
-                ✗ {attempt.wrong_count} Wrong
+                ✗ {finalWrong} Wrong
               </span>
               <span className="rounded-lg bg-muted text-muted-foreground text-xs font-bold px-2.5 py-1">
-                — {attempt.unattempted_count} Skipped
+                — {finalUnattempted} Skipped
               </span>
             </div>
           </div>
