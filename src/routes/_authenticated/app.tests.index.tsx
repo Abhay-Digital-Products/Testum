@@ -143,17 +143,17 @@ function Tests() {
   const ActiveIcon = activeConf.icon;
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12">
+    <div className="space-y-4 max-w-5xl mx-auto pb-16">
       {/* Top Header */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="font-display text-2xl font-black sm:text-3xl tracking-tight">Test Series Portal</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="font-display text-xl font-black sm:text-3xl tracking-tight">Test Series</h1>
+          <p className="mt-0.5 text-xs sm:text-sm text-muted-foreground">
             Select your category to begin.
           </p>
         </div>
-        <Button asChild variant="outline" className="rounded-xl border-primary/30 text-primary hover:bg-primary/5 font-semibold">
-          <Link to="/app/pricing"><Crown className="mr-1.5 h-4 w-4 text-primary" /> Unlock All Plans</Link>
+        <Button asChild variant="outline" size="sm" className="rounded-xl border-primary/30 text-primary hover:bg-primary/5 font-semibold text-xs">
+          <Link to="/app/pricing"><Crown className="mr-1.5 h-3.5 w-3.5 text-primary" /> Unlock Plans</Link>
         </Button>
       </div>
 
@@ -161,10 +161,10 @@ function Tests() {
       <div className="relative">
         <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search tests by title, chapter or syllabus topics..."
+          placeholder="Search tests..."
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="pl-10 h-12 rounded-xl text-sm bg-card border-border/80 shadow-xs focus:ring-2 focus:ring-primary/20"
+          className="pl-10 h-11 rounded-xl text-sm bg-card border-border/80 shadow-xs"
         />
         {q && (
           <button
@@ -176,65 +176,59 @@ function Tests() {
         )}
       </div>
 
-      {/* Tabs Switcher with Badges */}
+      {/* Tabs Switcher — horizontal scroll on mobile */}
       <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 h-12 p-1 bg-muted/60 rounded-xl border border-border/60">
-          <TabsTrigger
-            value="free"
-            className="rounded-lg text-xs font-bold transition-all data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-sm text-emerald-700 dark:text-emerald-400"
-          >
-            <Sparkles className="mr-1 h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">Free Tests</span>
-            <span className="ml-1.5 hidden sm:inline-block rounded-full bg-white/20 px-1.5 py-0.2 text-[10px]">
-              {counts.free}
-            </span>
-          </TabsTrigger>
+        <div className="-mx-0 overflow-x-auto no-scrollbar">
+          <TabsList className="flex w-max min-w-full sm:grid sm:grid-cols-4 h-11 p-1 bg-muted/60 rounded-xl border border-border/60">
+            <TabsTrigger
+              value="free"
+              className="flex-1 min-w-[90px] rounded-lg text-xs font-bold transition-all data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-sm text-emerald-700 dark:text-emerald-400"
+            >
+              <Sparkles className="mr-1 h-3 w-3 shrink-0" />
+              Free
+              <span className="ml-1 rounded-full bg-white/20 px-1 text-[10px]">{counts.free}</span>
+            </TabsTrigger>
 
-          <TabsTrigger
-            value="chapter"
-            className="rounded-lg text-xs font-semibold transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-          >
-            <span className="truncate">Chapter-wise</span>
-            <span className="ml-1.5 hidden sm:inline-block rounded-full bg-muted px-1.5 py-0.2 text-[10px] text-muted-foreground">
-              {counts.chapter}
-            </span>
-          </TabsTrigger>
+            <TabsTrigger
+              value="chapter"
+              className="flex-1 min-w-[95px] rounded-lg text-xs font-semibold transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+            >
+              Chapter
+              <span className="ml-1 rounded-full bg-muted px-1 text-[10px] text-muted-foreground">{counts.chapter}</span>
+            </TabsTrigger>
 
-          <TabsTrigger
-            value="part"
-            className="rounded-lg text-xs font-semibold transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-          >
-            <span className="truncate">Part syllabus</span>
-            <span className="ml-1.5 hidden sm:inline-block rounded-full bg-muted px-1.5 py-0.2 text-[10px] text-muted-foreground">
-              {counts.part}
-            </span>
-          </TabsTrigger>
+            <TabsTrigger
+              value="part"
+              className="flex-1 min-w-[75px] rounded-lg text-xs font-semibold transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+            >
+              Part
+              <span className="ml-1 rounded-full bg-muted px-1 text-[10px] text-muted-foreground">{counts.part}</span>
+            </TabsTrigger>
 
-          <TabsTrigger
-            value="full"
-            className="rounded-lg text-xs font-semibold transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-          >
-            <span className="truncate">Full syllabus</span>
-            <span className="ml-1.5 hidden sm:inline-block rounded-full bg-muted px-1.5 py-0.2 text-[10px] text-muted-foreground">
-              {counts.full}
-            </span>
-          </TabsTrigger>
-        </TabsList>
+            <TabsTrigger
+              value="full"
+              className="flex-1 min-w-[75px] rounded-lg text-xs font-semibold transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+            >
+              Full
+              <span className="ml-1 rounded-full bg-muted px-1 text-[10px] text-muted-foreground">{counts.full}</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Dynamic Category Hero Card */}
-        <div className={"mt-4 rounded-2xl border bg-gradient-to-r p-4 sm:p-5 transition-all duration-300 " + activeConf.gradient}>
-          <div className="flex items-start gap-3.5">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-card border shadow-xs">
-              <ActiveIcon className="h-5 w-5" />
+        <div className={"mt-3 rounded-2xl border bg-gradient-to-r p-3.5 sm:p-5 transition-all duration-300 " + activeConf.gradient}>
+          <div className="flex items-center gap-3">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-card border shadow-xs">
+              <ActiveIcon className="h-4 w-4" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="font-display text-base sm:text-lg font-bold text-foreground">{activeConf.title}</h2>
+                <h2 className="font-display text-sm sm:text-base font-bold text-foreground">{activeConf.title}</h2>
                 <span className={"rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border " + activeConf.badgeColor}>
-                  {filtered.length} {filtered.length === 1 ? "Test Available" : "Tests Available"}
+                  {filtered.length} tests
                 </span>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+              <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed hidden sm:block">
                 {activeConf.description}
               </p>
             </div>
@@ -287,116 +281,122 @@ function Tests() {
                   return (
                     <div
                       key={t.id}
-                      style={{ animationDelay: (index * 50) + "ms" }}
-                      className={"group relative rounded-2xl border bg-card p-4 sm:p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md animate-in fade-in-50 slide-in-from-bottom-2 fill-mode-both " + (
+                      style={{ animationDelay: (index * 40) + "ms" }}
+                      className={"group relative rounded-2xl border bg-card p-3.5 sm:p-5 transition-all duration-200 hover:shadow-md animate-in fade-in-50 slide-in-from-bottom-2 fill-mode-both " + (
                         isFreeTest
                           ? "border-emerald-500/30 hover:border-emerald-500/60"
                           : unlocked
                           ? "hover:border-primary/40"
-                          : "opacity-90 hover:border-border"
+                          : "opacity-90"
                       )}
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                        {/* Test details */}
-                        <div className="flex items-start gap-3.5 min-w-0 flex-1">
-                          <div className={"grid h-12 w-12 shrink-0 place-items-center rounded-xl transition-transform group-hover:scale-105 " + (
-                            isFreeTest
-                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                              : unlocked
-                              ? "bg-primary/10 text-primary"
-                              : "bg-secondary text-muted-foreground"
-                          )}>
-                            <Icon className="h-6 w-6" />
-                          </div>
-
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-display text-base sm:text-lg font-bold text-foreground group-hover:text-primary transition-colors">
-                                {t.title}
-                              </span>
-                              {isFreeTest && (
-                                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800 border border-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-300">
-                                  <Sparkles className="h-3 w-3" /> 100% FREE
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-                              <span className="font-medium text-foreground/80">{t.test_series?.title ?? "NEET Test Series"}</span>
-                              <span>·</span>
-                              <span className="capitalize font-semibold text-primary">{t.test_series?.subject ?? "Mixed"}</span>
-                            </div>
-
-                            {/* Syllabus Box if available */}
-                            {t.syllabus && (
-                              <div className="mt-2.5 flex items-start gap-2 rounded-xl bg-muted/40 p-2.5 text-xs text-foreground/90 border border-border/60">
-                                <BookOpen className="h-4 w-4 shrink-0 text-primary mt-0.5" />
-                                <div className="min-w-0 leading-relaxed">
-                                  <span className="font-bold text-foreground mr-1.5">Syllabus:</span>
-                                  <span className="text-muted-foreground">{t.syllabus}</span>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Meta pills */}
-                            <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                              <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-medium">
-                                <ListChecks className="h-3.5 w-3.5 text-primary" /> {t.total_questions} Questions
-                              </span>
-                              <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-medium">
-                                <Clock className="h-3.5 w-3.5 text-primary" /> {t.duration_minutes} Mins
-                              </span>
-                              <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-medium">
-                                <Trophy className="h-3.5 w-3.5 text-primary" /> {totalMarks} Marks
-                              </span>
-                              {t.opens_at && (
-                                <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-medium">
-                                  <Calendar className="h-3.5 w-3.5 text-primary" /> {new Date(t.opens_at).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}
-                                </span>
-                              )}
-                            </div>
-                          </div>
+                      {/* Top Row: Icon + Info + Badge+Button */}
+                      <div className="flex items-start gap-3">
+                        {/* Subject Icon */}
+                        <div className={"grid h-11 w-11 shrink-0 place-items-center rounded-xl " + (
+                          isFreeTest
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                            : unlocked
+                            ? "bg-primary/10 text-primary"
+                            : "bg-secondary text-muted-foreground"
+                        )}>
+                          <Icon className="h-5 w-5" />
                         </div>
 
-                        {/* Action buttons & status */}
-                        <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0">
-                          <span className={"rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider " + (
-                            isFreeTest
-                              ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                              : !unlocked
-                              ? "bg-muted text-muted-foreground border border-border"
-                              : done
-                              ? "bg-success/15 text-success border border-success/30"
-                              : "bg-primary/10 text-primary border border-primary/20"
-                          )}>
-                            {isFreeTest ? "Free Mock" : !unlocked ? "Locked" : done ? "Attempted" : "Ready"}
-                          </span>
-
-                          {unlocked ? (
-                            <Button
-                              asChild
-                              className={"h-10 px-5 font-semibold rounded-xl shadow-xs transition-all w-full sm:w-auto " + (
-                                isFreeTest
-                                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                                  : "bg-primary hover:bg-primary/90 text-primary-foreground"
-                              )}
-                            >
-                              <Link to="/app/tests/$testId" params={{ testId: t.id }}>
-                                {done ? (
-                                  <><CheckCircle2 className="mr-1.5 h-4 w-4" /> Reattempt</>
-                                ) : (
-                                  <><Play className="mr-1.5 h-4 w-4 fill-current" /> Start Test</>
+                        {/* Main Content */}
+                        <div className="min-w-0 flex-1">
+                          {/* Title row */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="font-display text-sm sm:text-base font-bold text-foreground group-hover:text-primary transition-colors leading-snug">
+                                  {t.title}
+                                </span>
+                                {isFreeTest && (
+                                  <span className="inline-flex items-center gap-0.5 rounded-md bg-emerald-100 px-1.5 py-0.5 text-[9px] font-extrabold text-emerald-800 border border-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-300">
+                                    <Sparkles className="h-2.5 w-2.5" /> FREE
+                                  </span>
                                 )}
-                              </Link>
-                            </Button>
-                          ) : (
-                            <Button asChild variant="secondary" className="h-10 px-4 font-semibold rounded-xl w-full sm:w-auto" disabled={entLoading}>
-                              <Link to="/app/pricing">
-                                <Lock className="mr-1.5 h-4 w-4 text-muted-foreground" /> Unlock
-                              </Link>
-                            </Button>
+                              </div>
+                              <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground flex-wrap">
+                                <span className="font-medium text-foreground/70 truncate max-w-[160px] sm:max-w-none">{t.test_series?.title ?? "NEET Test Series"}</span>
+                                <span>·</span>
+                                <span className="capitalize font-semibold text-primary shrink-0">{t.test_series?.subject ?? "Mixed"}</span>
+                              </div>
+                            </div>
+
+                            {/* Status badge — top right on mobile */}
+                            <span className={"shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider " + (
+                              isFreeTest
+                                ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                : !unlocked
+                                ? "bg-muted text-muted-foreground border border-border"
+                                : done
+                                ? "bg-success/15 text-success border border-success/30"
+                                : "bg-primary/10 text-primary border border-primary/20"
+                            )}>
+                              {isFreeTest ? "Free" : !unlocked ? "Locked" : done ? "Done" : "Ready"}
+                            </span>
+                          </div>
+
+                          {/* Meta pills */}
+                          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                            <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-medium">
+                              <ListChecks className="h-3 w-3 text-primary" /> {t.total_questions}Q
+                            </span>
+                            <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-medium">
+                              <Clock className="h-3 w-3 text-primary" /> {t.duration_minutes}m
+                            </span>
+                            <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-medium">
+                              <Trophy className="h-3 w-3 text-primary" /> {totalMarks} marks
+                            </span>
+                            {t.opens_at && (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-medium">
+                                <Calendar className="h-3 w-3 text-primary" /> {new Date(t.opens_at).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Syllabus (hidden on very small, shown on sm+) */}
+                          {t.syllabus && (
+                            <div className="mt-2 hidden sm:flex items-start gap-2 rounded-xl bg-muted/40 p-2 text-xs text-foreground/90 border border-border/60">
+                              <BookOpen className="h-3.5 w-3.5 shrink-0 text-primary mt-0.5" />
+                              <div className="min-w-0 leading-relaxed">
+                                <span className="font-bold text-foreground mr-1">Syllabus:</span>
+                                <span className="text-muted-foreground">{t.syllabus}</span>
+                              </div>
+                            </div>
                           )}
                         </div>
+                      </div>
+
+                      {/* Bottom CTA Button — full width on mobile */}
+                      <div className="mt-3 pt-3 border-t border-border/60">
+                        {unlocked ? (
+                          <Button
+                            asChild
+                            size="sm"
+                            className={"w-full h-10 font-bold rounded-xl shadow-xs " + (
+                              isFreeTest
+                                ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                                : "bg-primary hover:bg-primary/90 text-primary-foreground"
+                            )}
+                          >
+                            <Link to="/app/tests/$testId" params={{ testId: t.id }}>
+                              {done ? (
+                                <><CheckCircle2 className="mr-1.5 h-4 w-4" /> Reattempt Test</>
+                              ) : (
+                                <><Play className="mr-1.5 h-4 w-4 fill-current" /> Start Test</>
+                              )}
+                            </Link>
+                          </Button>
+                        ) : (
+                          <Button asChild variant="secondary" size="sm" className="w-full h-10 font-bold rounded-xl" disabled={entLoading}>
+                            <Link to="/app/pricing">
+                              <Lock className="mr-1.5 h-4 w-4 text-muted-foreground" /> Unlock to Access
+                            </Link>
+                          </Button>
+                        )}
                       </div>
                     </div>
                   );

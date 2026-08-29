@@ -602,19 +602,19 @@ function Player() {
     <div className="flex min-h-[100dvh] flex-col bg-slate-50 dark:bg-slate-950 select-none">
       {/* Top Fixed Header */}
       <header className="sticky top-0 z-30 border-b bg-card/95 backdrop-blur shadow-xs">
-        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-3 sm:px-4">
+        <div className="mx-auto flex h-12 sm:h-14 max-w-7xl items-center justify-between gap-2 px-3 sm:px-4">
           {/* Left: Test Title & Subject Chips */}
           <div className="flex items-center gap-2 min-w-0">
             <div className="min-w-0">
-              <h1 className="truncate font-display text-sm font-bold text-foreground sm:text-base">
-                {test?.title || "NEET CBT Exam"}
+              <h1 className="truncate font-display text-sm font-bold text-foreground max-w-[140px] sm:max-w-xs md:max-w-none">
+                {test?.title || "CBT Exam"}
               </h1>
-              <div className="flex items-center gap-1 text-[11px] text-muted-foreground truncate">
+              <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-muted-foreground truncate">
                 <span className="capitalize font-semibold text-primary">
                   {currentQuestion.subject}
                 </span>
                 {currentQuestion.chapter && (
-                  <span>· {currentQuestion.chapter}</span>
+                  <span className="hidden sm:inline">· {currentQuestion.chapter}</span>
                 )}
               </div>
             </div>
@@ -797,26 +797,22 @@ function Player() {
       {/* Main Examination Layout */}
       <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col md:flex-row md:gap-4 md:p-4">
         {/* Left / Center: Question Paper Workspace */}
-        <main className="flex-1 flex flex-col justify-between rounded-none md:rounded-3xl border-y md:border bg-card p-4 sm:p-6 shadow-xs">
+        <main className="flex-1 flex flex-col justify-between rounded-none md:rounded-3xl border-y md:border bg-card p-3 sm:p-5 shadow-xs">
           <div>
             {/* Question Info Bar */}
-            <div className="mb-4 flex items-center justify-between pb-3 border-b">
-              <div className="flex items-center gap-2">
-                <span className="rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
-                  Question {currentGlobalIdx + 1} of {questions.length}
+            <div className="mb-3 flex items-center justify-between pb-3 border-b">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="rounded-lg bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
+                  Q {currentGlobalIdx + 1}/{questions.length}
                 </span>
-                <span className="rounded-lg bg-secondary px-2 py-1 text-[11px] font-semibold uppercase text-muted-foreground">
+                <span className="rounded-lg bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase text-muted-foreground hidden sm:inline-block">
                   {currentQuestion.subject}
                 </span>
               </div>
-              <div className="text-xs font-semibold text-muted-foreground flex items-center gap-2">
-                <span className="text-emerald-600 font-bold">
-                  +{test?.marks_correct ?? 4}
-                </span>
-                <span>/</span>
-                <span className="text-rose-600 font-bold">
-                  {test?.marks_wrong ?? -1}
-                </span>
+              <div className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                <span className="text-emerald-600 font-bold">+{test?.marks_correct ?? 4}</span>
+                <span className="text-slate-400">/</span>
+                <span className="text-rose-600 font-bold">{test?.marks_wrong ?? -1}</span>
               </div>
             </div>
 
@@ -841,13 +837,13 @@ function Player() {
 
             {/* Question Text */}
             {currentQuestion.question_text && (
-              <div className="mb-6 text-base font-medium leading-relaxed text-foreground whitespace-pre-wrap">
+              <div className="mb-4 text-sm sm:text-base font-medium leading-relaxed text-foreground whitespace-pre-wrap">
                 {currentQuestion.question_text}
               </div>
             )}
 
-            {/* Options List */}
-            <div className="grid gap-3 sm:grid-cols-2 pt-2">
+            {/* Options List — single col on mobile, 2-col on sm+ */}
+            <div className="grid gap-2.5 sm:grid-cols-2 pt-1">
               {currentQuestion.options.map((op) => {
                 const isSelected = currentAnswer?.selected_option === op.key;
                 return (
@@ -889,76 +885,50 @@ function Player() {
           </div>
 
           {/* Bottom Action Buttons Bar */}
-          <div className="mt-8 pt-4 border-t space-y-3">
-            {/* Quick Status Bar */}
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <div className="flex items-center gap-3">
-                <span>
-                  Status:{" "}
-                  <strong
-                    className={cn(
-                      "font-semibold capitalize",
-                      currentAnswer?.status === "answered" && "text-emerald-600",
-                      currentAnswer?.status === "marked" && "text-purple-600",
-                      currentAnswer?.status === "answered_marked" && "text-purple-600",
-                      currentAnswer?.status === "not_answered" && "text-rose-600",
-                      currentAnswer?.status === "not_visited" && "text-slate-500"
-                    )}
-                  >
-                    {currentAnswer?.status === "answered_marked"
-                      ? "Answered & Marked"
-                      : currentAnswer?.status?.replace("_", " ") ?? "Not Answered"}
-                  </strong>
-                </span>
-                {currentAnswer?.selected_option && (
-                  <span>
-                    Selected: <strong>{currentAnswer.selected_option}</strong>
-                  </span>
-                )}
+          <div className="mt-5 pt-3 border-t space-y-2.5">
+            {/* Selected answer indicator */}
+            {currentAnswer?.selected_option && (
+              <div className="text-xs text-muted-foreground">
+                Selected: <strong className="text-foreground">{currentAnswer.selected_option}</strong>
               </div>
+            )}
 
-              <div className="hidden sm:flex items-center gap-1.5 text-[11px]">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                <span>Auto-saved live</span>
-              </div>
-            </div>
-
-            {/* Buttons Grid */}
+            {/* Mobile: 2-row layout | Desktop: 4-col single row */}
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               <Button
                 variant="outline"
-                size="default"
+                size="sm"
                 onClick={clearResponse}
-                className="rounded-xl border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 font-semibold"
+                className="h-11 rounded-xl border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 font-semibold text-xs sm:text-sm"
               >
-                <CircleX className="mr-1.5 h-4 w-4" /> Clear
+                <CircleX className="mr-1 h-3.5 w-3.5" /> Clear
               </Button>
 
               <Button
                 variant="secondary"
-                size="default"
+                size="sm"
                 onClick={markForReviewAndNext}
-                className="rounded-xl font-semibold bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-950 dark:text-purple-300"
+                className="h-11 rounded-xl font-semibold bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-950 dark:text-purple-300 text-xs sm:text-sm"
               >
-                <Flag className="mr-1.5 h-4 w-4" /> Mark & Next
+                <Flag className="mr-1 h-3.5 w-3.5" /> Mark
               </Button>
 
               <Button
                 variant="outline"
-                size="default"
+                size="sm"
                 onClick={goPrevious}
                 disabled={currentGlobalIdx === 0}
-                className="rounded-xl font-semibold"
+                className="h-11 rounded-xl font-semibold text-xs sm:text-sm"
               >
-                <ChevronLeft className="mr-1.5 h-4 w-4" /> Previous
+                <ChevronLeft className="mr-1 h-3.5 w-3.5" /> Prev
               </Button>
 
               <Button
-                size="default"
+                size="sm"
                 onClick={saveAndNext}
-                className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold shadow-md"
+                className="h-11 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold shadow-md text-xs sm:text-sm"
               >
-                <Save className="mr-1.5 h-4 w-4" /> Save & Next
+                <Save className="mr-1 h-3.5 w-3.5" /> Save & Next
               </Button>
             </div>
           </div>
