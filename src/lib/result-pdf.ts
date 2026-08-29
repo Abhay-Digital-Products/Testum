@@ -264,16 +264,36 @@ export async function downloadResultPdf(input: ResultPdfInput) {
   y += 65;
 
   /* ── 3. PRIMARY METRIC CARDS ────────────────────────── */
-  const attempted = input.correct + input.wrong;
-  const accuracy = attempted ? Math.round((input.correct / attempted) * 100) : 0;
-  const percent   = input.totalMax ? Math.round((input.score / input.totalMax) * 100) : 0;
+  const computedCorrect = (input.questions ?? []).filter((q) => {
+    const s = q.selected_option ? String(q.selected_option).trim().toUpperCase() : null;
+    const c = q.correct_option ? String(q.correct_option).trim().toUpperCase() : "";
+    return s && (q.is_correct === true || s === c);
+  }).length;
+
+  const computedWrong = (input.questions ?? []).filter((q) => {
+    const s = q.selected_option ? String(q.selected_option).trim().toUpperCase() : null;
+    const c = q.correct_option ? String(q.correct_option).trim().toUpperCase() : "";
+    return s && !(q.is_correct === true || s === c);
+  }).length;
+
+  const computedUnattempted = (input.questions ?? []).length - computedCorrect - computedWrong;
+  const useComputed = input.correct === 0 && input.wrong === 0 && (computedCorrect > 0 || computedWrong > 0);
+
+  const finalCorrect = useComputed ? computedCorrect : input.correct;
+  const finalWrong = useComputed ? computedWrong : input.wrong;
+  const finalUnattempted = useComputed ? computedUnattempted : input.unattempted;
+  const finalScore = useComputed ? (finalCorrect * 4 - finalWrong * 1) : input.score;
+
+  const attempted = finalCorrect + finalWrong;
+  const accuracy = attempted ? Math.round((finalCorrect / attempted) * 100) : 0;
+  const percent   = input.totalMax ? Math.round((finalScore / input.totalMax) * 100) : 0;
   const minSpent  = Math.floor(input.timeSpentSeconds / 60);
 
   const metrics: Array<{ label: string; value: string; sub: string; color: RGB; accentBg: RGB }> = [
-    { label: "FINAL SCORE",      value: `${Math.round(input.score)}/${input.totalMax}`, sub: `${percent}% of max`,               color: PRIMARY, accentBg: INDIGO_BG },
-    { label: "ACCURACY",         value: `${accuracy}%`,                                 sub: `${input.correct}/${attempted} att.`, color: accuracy >= 75 ? GREEN : accuracy >= 50 ? AMBER : RED, accentBg: accuracy >= 75 ? GREEN_BG : accuracy >= 50 ? AMBER_BG : RED_BG },
+    { label: "FINAL SCORE",      value: `${Math.round(finalScore)}/${input.totalMax}`, sub: `${percent}% of max`,               color: PRIMARY, accentBg: INDIGO_BG },
+    { label: "ACCURACY",         value: `${accuracy}%`,                                 sub: `${finalCorrect}/${attempted} att.`, color: accuracy >= 75 ? GREEN : accuracy >= 50 ? AMBER : RED, accentBg: accuracy >= 75 ? GREEN_BG : accuracy >= 50 ? AMBER_BG : RED_BG },
     { label: "TIME USED",        value: `${minSpent} min`,                               sub: `of ${input.durationMinutes} min`,   color: DARK, accentBg: LIGHT_BG },
-    { label: "ATTEMPT RATE",     value: `${attempted}/${attempted + input.unattempted}`, sub: `${input.unattempted} skipped`,      color: DARK, accentBg: LIGHT_BG },
+    { label: "ATTEMPT RATE",     value: `${attempted}/${attempted + finalUnattempted}`, sub: `${finalUnattempted} skipped`,      color: DARK, accentBg: LIGHT_BG },
   ];
 
   const mw = (W - M * 2 - 15) / 4;
@@ -307,9 +327,9 @@ export async function downloadResultPdf(input: ResultPdfInput) {
   /* ── 4. ANSWER BREAKDOWN ROW ────────────────────────── */
   const bw = (W - M * 2 - 10) / 3;
   const breakdown = [
-    { label: "CORRECT",      count: input.correct,     score: `+${input.correct * 4} Marks`,   color: GREEN, bg: GREEN_BG, border: GREEN },
-    { label: "INCORRECT",    count: input.wrong,       score: `-${input.wrong} Marks`,          color: RED,   bg: RED_BG,   border: RED },
-    { label: "UNATTEMPTED",  count: input.unattempted, score: "0 Marks",                        color: GREY,  bg: LIGHT_BG, border: BORDER },
+    { label: "CORRECT",      count: finalCorrect,     score: `+${finalCorrect * 4} Marks`,   color: GREEN, bg: GREEN_BG, border: GREEN },
+    { label: "INCORRECT",    count: finalWrong,       score: `-${finalWrong} Marks`,          color: RED,   bg: RED_BG,   border: RED },
+    { label: "UNATTEMPTED",  count: finalUnattempted, score: "0 Marks",                        color: GREY,  bg: LIGHT_BG, border: BORDER },
   ];
 
   breakdown.forEach((b, i) => {
@@ -591,11 +611,13 @@ export async function downloadResultPdf(input: ResultPdfInput) {
     paragraph(`All ${qs.length} questions with question images, your response, verified correct options, and step-by-step explanations.`);
 
     for (const q of qs) {
-      const isCorrect  = q.is_correct === true;
-      const isWrong    = q.selected_option != null && !isCorrect;
-      const isSkipped  = q.selected_option == null;
+      const selected = q.selected_option ? String(q.selected_option).trim().toUpperCase() : null;
+      const correctOpt = q.correct_option ? String(q.correct_option).trim().toUpperCase() : "";
+      const isSkipped  = !selected;
+      const isCorrect  = !isSkipped && (q.is_correct === true || selected === correctOpt);
+      const isWrong    = !isSkipped && !isCorrect;
       const statusColor: RGB = isCorrect ? GREEN : isWrong ? RED : GREY;
-      const statusLabel      = isCorrect ? "CORRECT  +4" : isWrong ? "WRONG  −1" : "NOT ATTEMPTED";
+      const statusLabel      = isCorrect ? "CORRECT  (+4)" : isWrong ? "WRONG  (-1)" : "NOT ATTEMPTED  (0)";
       const timeStr          = q.time_spent_seconds && q.time_spent_seconds > 0
         ? `${Math.floor(q.time_spent_seconds / 60)}m ${q.time_spent_seconds % 60}s`
         : "—";
@@ -667,13 +689,15 @@ export async function downloadResultPdf(input: ResultPdfInput) {
 
       /* ── Options ── */
       const letters = ["A", "B", "C", "D"];
-      let optionsList: Array<{ key: string; text: string }> = [];
+      let optionsList: Array<{ key: string; text: string; image_url?: string }> = [];
       if (Array.isArray(q.options)) {
         optionsList = letters.map((k, i) => {
-          const match = (q.options as any[]).find((o: any) => o?.key === k);
-          if (match) return { key: k, text: match.text || (match.image_url ? "[Image Option]" : `Option ${k}`) };
+          const match = (q.options as any[]).find((o: any) => o?.key?.toUpperCase() === k || o?.key === k);
+          if (match) return { key: k, text: match.text || (match.image_url ? "[Image Option]" : `Option ${k}`), image_url: match.image_url };
           const raw = (q.options as any[])[i];
-          return { key: k, text: typeof raw === "string" ? raw : `Option ${k}` };
+          if (typeof raw === "string") return { key: k, text: raw };
+          if (raw && typeof raw === "object") return { key: k, text: raw.text || (raw.image_url ? "[Image Option]" : `Option ${k}`), image_url: raw.image_url };
+          return { key: k, text: `Option ${k}` };
         });
       }
 
@@ -686,8 +710,9 @@ export async function downloadResultPdf(input: ResultPdfInput) {
         y += 10;
 
         for (const opt of optionsList) {
-          const isOptCorrect = q.correct_option === opt.key;
-          const isOptChosen  = q.selected_option === opt.key;
+          const optKey = opt.key.toUpperCase();
+          const isOptCorrect = correctOpt === optKey;
+          const isOptChosen  = selected === optKey;
           const isWrongChoice = isOptChosen && !isOptCorrect;
 
           let bg: RGB | null  = null;
@@ -696,8 +721,8 @@ export async function downloadResultPdf(input: ResultPdfInput) {
           let suffix          = "";
 
           if (isOptCorrect && isOptChosen) { bg = GREEN_BG; bd = GREEN; tc = GREEN; suffix = "  ✓  Your Answer  (Correct)"; }
-          else if (isOptCorrect)           { bg = GREEN_BG; bd = GREEN; tc = GREEN; suffix = "  ✓  Correct Answer"; }
-          else if (isWrongChoice)          { bg = RED_BG;   bd = RED;   tc = RED;   suffix = "  ✗  Your Answer  (Wrong)"; }
+          else if (isOptCorrect)           { bg = GREEN_BG; bd = GREEN; tc = GREEN; suffix = "  ✓  Correct Option"; }
+          else if (isWrongChoice)          { bg = RED_BG;   bd = RED;   tc = RED;   suffix = "  ✗  Your Answer  (Incorrect)"; }
 
           const label  = `  (${opt.key})  ${opt.text}${suffix}`;
           const lines  = doc.splitTextToSize(label, W - M * 2 - 20);
@@ -720,6 +745,22 @@ export async function downloadResultPdf(input: ResultPdfInput) {
             doc.text(lines[li], M + 14, y + li * 12);
           }
           y += rowH + 3;
+
+          if (opt.image_url) {
+            const optImg = await loadImage(opt.image_url);
+            if (optImg) {
+              const oMaxW = Math.min(W - M * 2 - 28, 220);
+              const oH = Math.min((optImg.h / optImg.w) * oMaxW, 100);
+              const oW = (optImg.w / optImg.h) * oH;
+              ensure(oH + 8);
+              try {
+                doc.addImage(optImg.data, optImg.format || "JPEG", M + 14, y, oW, oH);
+                y += oH + 6;
+              } catch (e) {
+                console.warn("jsPDF addImage failed for option image", e);
+              }
+            }
+          }
         }
       }
 
@@ -727,10 +768,11 @@ export async function downloadResultPdf(input: ResultPdfInput) {
       ensure(26);
       y += 4;
       const summaryParts: string[] = [];
-      if (!isSkipped) summaryParts.push(`Your Answer: (${q.selected_option})`);
-      summaryParts.push(`Correct Answer: (${q.correct_option})`);
-      if (!isSkipped) summaryParts.push(isCorrect ? "Result: CORRECT" : "Result: WRONG");
-      else summaryParts.push("Result: NOT ATTEMPTED");
+      if (!isSkipped) summaryParts.push(`Your Answer: Option (${selected})`);
+      summaryParts.push(`Correct Answer: Option (${correctOpt})`);
+      if (isCorrect) summaryParts.push("Verdict: CORRECT (+4)");
+      else if (isWrong) summaryParts.push("Verdict: INCORRECT (-1)");
+      else summaryParts.push("Verdict: NOT ATTEMPTED (0)");
 
       const summaryBg: RGB   = isCorrect ? GREEN_BG  : isWrong ? RED_BG    : LIGHT_BG;
       const summaryBd: RGB   = isCorrect ? GREEN      : isWrong ? RED        : BORDER;

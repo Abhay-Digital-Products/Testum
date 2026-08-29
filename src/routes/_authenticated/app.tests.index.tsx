@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { TestListSkeleton } from "@/components/skeleton-loaders";
 import {
   Search, Clock, ListChecks, Play, Atom, TestTube2, Sprout, Trophy,
-  CheckCircle2, Lock, Crown, Layers, BookOpen, Calendar
+  CheckCircle2, Lock, Crown, Layers, BookOpen, Calendar, Gift, Puzzle
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/tests/")({
@@ -36,7 +36,7 @@ const TAB_CONFIG = {
   free: {
     title: "100% Free Practice Tests",
     description: "Real NTA exam pattern, timer, question palette & instant performance scorecards without payment.",
-    icon: BookOpen,
+    icon: Gift,
     gradient: "from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 text-emerald-700",
     badge: "Free Access",
     badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-300",
@@ -52,7 +52,7 @@ const TAB_CONFIG = {
   part: {
     title: "Part Syllabus Checkpoints",
     description: "Combined multi-chapter and class-level checkpoints to track progressive syllabus mastery.",
-    icon: Layers,
+    icon: Puzzle,
     gradient: "from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/20 text-amber-700",
     badge: "Part Plan",
     badgeColor: "bg-amber-100 text-amber-800 border-amber-300",
@@ -176,35 +176,55 @@ function Tests() {
         )}
       </div>
 
-      {/* Tabs Switcher */}
+      {/* Tabs Switcher - Pill Bar matching exact design */}
       <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
-        {/* Mobile: horizontal scroll | Desktop: full-width grid */}
-        <div className="rounded-2xl bg-muted/50 border border-border/60 p-1.5">
-          <div className="grid grid-cols-4 gap-1.5">
+        <div className="w-full rounded-full border border-blue-200/90 dark:border-blue-900/60 bg-white/95 dark:bg-card/95 p-1 sm:p-1.5 shadow-sm">
+          <div className="flex items-center justify-between divide-x divide-slate-200/90 dark:divide-slate-800/80">
             {([
-              { key: "free",    label: "Free Test",          shortLabel: "Free",    count: counts.free,    dot: "bg-emerald-500",  active: "bg-emerald-600 text-white shadow-md shadow-emerald-200 dark:shadow-emerald-900/40",  inactive: "text-emerald-700 dark:text-emerald-400 hover:bg-card hover:shadow-xs" },
-              { key: "chapter", label: "Chapter Test",       shortLabel: "Chapter", count: counts.chapter, dot: "bg-blue-500",     active: "bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-blue-900/40",              inactive: "text-foreground hover:bg-card hover:shadow-xs" },
-              { key: "part",    label: "Part Test",          shortLabel: "Part",    count: counts.part,    dot: "bg-amber-500",    active: "bg-amber-500 text-white shadow-md shadow-amber-200 dark:shadow-amber-900/40",            inactive: "text-foreground hover:bg-card hover:shadow-xs" },
-              { key: "full",    label: "Full Syllabus Test", shortLabel: "Full",    count: counts.full,    dot: "bg-purple-500",   active: "bg-purple-600 text-white shadow-md shadow-purple-200 dark:shadow-purple-900/40",          inactive: "text-foreground hover:bg-card hover:shadow-xs" },
-            ] as const).map(({ key, label, shortLabel, count, dot, active, inactive }) => (
-              <button
-                key={key}
-                onClick={() => setTab(key as any)}
-                className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-2 rounded-xl px-2 sm:px-4 py-2 sm:py-2.5 text-xs font-bold transition-all duration-200 ${
-                  tab === key ? active : inactive
-                }`}
-              >
-                <span className={`h-2 w-2 rounded-full shrink-0 ${tab === key ? "bg-white/80" : dot}`} />
-                {/* Short label on mobile, full label on sm+ */}
-                <span className="sm:hidden text-center leading-tight">{shortLabel}</span>
-                <span className="hidden sm:inline whitespace-nowrap">{label}</span>
-                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ml-auto ${
-                  tab === key ? "bg-white/20 text-white" : "bg-background/80 text-muted-foreground"
-                }`}>
-                  {count}
-                </span>
-              </button>
-            ))}
+              { key: "free",    label: "Free",    icon: Gift,     count: counts.free },
+              { key: "chapter", label: "Chapter", icon: BookOpen, count: counts.chapter },
+              { key: "part",    label: "Part",    icon: Puzzle,   count: counts.part },
+              { key: "full",    label: "Full",    icon: Trophy,   count: counts.full },
+            ] as const).map(({ key, label, icon: Icon, count }) => {
+              const isActive = tab === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setTab(key as any)}
+                  className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2.5 px-2 sm:px-4 py-1.5 sm:py-2 rounded-full transition-all duration-200 select-none ${
+                    isActive
+                      ? "bg-blue-50/90 dark:bg-blue-950/60 ring-1 ring-blue-300 dark:ring-blue-700 shadow-2xs font-bold text-blue-700 dark:text-blue-300"
+                      : "text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40 font-medium"
+                  }`}
+                >
+                  {/* Left Circular Icon */}
+                  <div
+                    className={`grid h-7 w-7 sm:h-8 sm:w-8 shrink-0 place-items-center rounded-full transition-colors ${
+                      isActive
+                        ? "bg-blue-600 text-white shadow-xs"
+                        : "bg-blue-50 text-blue-600 dark:bg-blue-950/80 dark:text-blue-400"
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  </div>
+
+                  {/* Label */}
+                  <span className="text-xs sm:text-sm tracking-tight">{label}</span>
+
+                  {/* Count Pill Badge */}
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold transition-colors ${
+                      isActive
+                        ? "bg-blue-600/15 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 ring-1 ring-blue-400/30"
+                        : "bg-blue-50 text-blue-600 dark:bg-blue-950/80 dark:text-blue-400"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 

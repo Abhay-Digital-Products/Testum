@@ -21,8 +21,19 @@ export const generateAiAnalysis = createServerFn({ method: "POST" })
     // Fetch all student answers with associated question details from Supabase
     const { data: answers } = await supabase
       .from("answers")
-      .select("is_correct, time_spent_seconds, question_id, questions(subject, chapter, question_text, correct_option)")
+      .select("is_correct, selected_option, time_spent_seconds, question_id, questions(subject, chapter, question_text, correct_option)")
       .eq("attempt_id", data.attemptId);
+
+    // Fetch all test questions as fallback in case relational join is null
+    const { data: testQuestions } = await supabase
+      .from("questions")
+      .select("id, subject, chapter, correct_option")
+      .eq("test_id", attempt.test_id);
+
+    const questionMap = new Map<string, any>();
+    for (const q of (testQuestions ?? [])) {
+      questionMap.set(q.id, q);
+    }
 
     // Build subject and chapter statistics
     type Stat = { total: number; correct: number; wrong: number; unattempted: number; timeSpent: number };
@@ -30,7 +41,7 @@ export const generateAiAnalysis = createServerFn({ method: "POST" })
     const byChapter: Record<string, Stat> = {};
 
     for (const a of answers ?? []) {
-      const q: any = a.questions;
+      const q: any = a.questions || questionMap.get(a.question_id);
       const s = (q?.subject ?? "general").toLowerCase();
       const c = q?.chapter || "General Revision";
       const time = Number(a.time_spent_seconds || 0);
@@ -43,10 +54,14 @@ export const generateAiAnalysis = createServerFn({ method: "POST" })
       bySubject[s].timeSpent += time;
       byChapter[c].timeSpent += time;
 
-      if (a.is_correct === true) {
+      const selected = a.selected_option ? String(a.selected_option).trim().toUpperCase() : null;
+      const isCorr = a.is_correct === true || (selected && selected === String(q?.correct_option || "").trim().toUpperCase());
+      const isWrng = a.is_correct === false || (selected && !isCorr);
+
+      if (isCorr) {
         bySubject[s].correct++;
         byChapter[c].correct++;
-      } else if (a.is_correct === false) {
+      } else if (isWrng) {
         bySubject[s].wrong++;
         byChapter[c].wrong++;
       } else {

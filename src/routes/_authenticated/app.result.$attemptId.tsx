@@ -42,10 +42,10 @@ function Result() {
     const { data: an } = await supabase.from("analysis").select("*").eq("attempt_id", attemptId).maybeSingle();
     setAnalysis(an);
 
-    // Fetch all answers for this attempt
+    // Fetch all answers for this attempt directly by attempt_id
     const { data: rows } = await supabase
       .from("answers")
-      .select("is_correct, selected_option, time_spent_seconds, questions(id, order_index, subject, chapter, question_text, question_image_url, option_type, options, correct_option, solution_text, solution_image_url, solution_video_url)")
+      .select("question_id, is_correct, selected_option, status, time_spent_seconds")
       .eq("attempt_id", attemptId);
 
     // Also fetch ALL questions for this test so unattempted ones appear too
@@ -62,15 +62,24 @@ function Result() {
     // Build answer lookup by question id
     const answerMap = new Map<string, any>();
     for (const r of (rows ?? [])) {
-      if (r.questions?.id) answerMap.set(r.questions.id, r);
+      if (r.question_id) answerMap.set(r.question_id, r);
     }
 
-    // Merge: every question gets an entry
+    // Merge: every question gets an entry with accurate attempt evaluation
     const merged = allQRows.map((q: any) => {
       const ans = answerMap.get(q.id);
+      const selected = ans?.selected_option ? String(ans.selected_option).trim() : null;
+      let isCorrect: boolean | null = null;
+      if (selected) {
+        if (ans?.is_correct !== undefined && ans?.is_correct !== null) {
+          isCorrect = ans.is_correct;
+        } else {
+          isCorrect = selected.toUpperCase() === String(q.correct_option || "").trim().toUpperCase();
+        }
+      }
       return {
-        is_correct: ans?.is_correct ?? null,
-        selected_option: ans?.selected_option ?? null,
+        is_correct: isCorrect,
+        selected_option: selected,
         time_spent_seconds: ans?.time_spent_seconds ?? 0,
         questions: q,
       };
@@ -97,6 +106,29 @@ function Result() {
     }
   };
 
+  const totalQuestions = attempt?.tests?.total_questions ?? review.length ?? 180;
+  const marksPerCorrect = attempt?.tests?.marks_correct ?? 4;
+  const marksPerWrong = attempt?.tests?.marks_wrong ?? -1;
+  const totalMax = totalQuestions * marksPerCorrect;
+
+  const derivedCorrect = review.filter((r: any) => r.is_correct === true).length;
+  const derivedWrong = review.filter((r: any) => Boolean(r.selected_option) && r.is_correct === false).length;
+  const derivedUnattempted = review.filter((r: any) => !r.selected_option).length;
+  const hasDerived = (derivedCorrect > 0 || derivedWrong > 0) && attempt.correct_count === 0 && attempt.wrong_count === 0;
+
+  const finalCorrect = hasDerived ? derivedCorrect : (attempt.correct_count ?? derivedCorrect);
+  const finalWrong = hasDerived ? derivedWrong : (attempt.wrong_count ?? derivedWrong);
+  const finalUnattempted = hasDerived ? derivedUnattempted : (attempt.unattempted_count ?? derivedUnattempted);
+  const finalScore = hasDerived ? (finalCorrect * marksPerCorrect + finalWrong * marksPerWrong) : Number(attempt.score ?? 0);
+
+  const attempted = finalCorrect + finalWrong;
+  const total = attempted + finalUnattempted;
+  const accuracy = attempted ? Math.round((finalCorrect / attempted) * 100) : 0;
+  const percent = totalMax ? Math.round((finalScore / totalMax) * 100) : 0;
+  const subjects = analysis?.subject_breakdown?.subjects ?? {};
+  const chapters = analysis?.subject_breakdown?.chapters ?? {};
+  const solutions = review.filter((r: any) => r.questions?.solution_video_url);
+
   const downloadPdf = async () => {
     setPdfBusy(true);
     try {
@@ -107,12 +139,12 @@ function Result() {
         studentClass: profile?.student_class ?? null,
         testTitle: attempt.tests?.title ?? "Mock Test",
         submittedAt: attempt.submitted_at,
-        score: Number(attempt.score),
-        totalMax: (attempt.tests?.total_questions ?? 180) * (attempt.tests?.marks_correct ?? 4),
-        correct: attempt.correct_count,
-        wrong: attempt.wrong_count,
-        unattempted: attempt.unattempted_count,
-        timeSpentSeconds: attempt.time_spent_seconds,
+        score: finalScore,
+        totalMax,
+        correct: finalCorrect,
+        wrong: finalWrong,
+        unattempted: finalUnattempted,
+        timeSpentSeconds: attempt.time_spent_seconds ?? 0,
         durationMinutes: attempt.tests?.duration_minutes ?? 180,
         subjects: an?.subject_breakdown?.subjects ?? {},
         chapters: an?.subject_breakdown?.chapters ?? {},
@@ -149,15 +181,6 @@ function Result() {
 
   if (!attempt) return <div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground"><Loader2 className="h-6 w-6 animate-spin text-primary mr-2" /> Loading result diagnostics...</div>;
 
-  const totalMax = (attempt.tests?.total_questions ?? 180) * (attempt.tests?.marks_correct ?? 4);
-  const attempted = attempt.correct_count + attempt.wrong_count;
-  const total = attempted + attempt.unattempted_count;
-  const accuracy = attempted ? Math.round((attempt.correct_count / attempted) * 100) : 0;
-  const percent = totalMax ? Math.round((Number(attempt.score) / totalMax) * 100) : 0;
-  const subjects = analysis?.subject_breakdown?.subjects ?? {};
-  const chapters = analysis?.subject_breakdown?.chapters ?? {};
-  const solutions = review.filter((r: any) => r.questions?.solution_video_url);
-
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
       {/* Top action bar */}
@@ -183,26 +206,26 @@ function Result() {
           <div className="rounded-2xl bg-primary-foreground/10 p-4 backdrop-blur-sm">
             <div className="text-xs opacity-85 font-medium">Final Score</div>
             <div className="font-display text-3xl font-black mt-0.5">
-              {Math.round(Number(attempt.score))}<span className="text-base font-semibold opacity-75">/{totalMax}</span>
+              {Math.round(finalScore)}<span className="text-base font-semibold opacity-75">/{totalMax}</span>
             </div>
             <div className="mt-1 text-xs opacity-85">{percent}% of total marks</div>
           </div>
           <div className="rounded-2xl bg-primary-foreground/10 p-4 backdrop-blur-sm">
             <div className="text-xs opacity-85 font-medium">Accuracy</div>
             <div className="font-display text-3xl font-black mt-0.5">{accuracy}%</div>
-            <div className="mt-1 text-xs opacity-85">{attempt.correct_count} correct of {attempted}</div>
+            <div className="mt-1 text-xs opacity-85">{finalCorrect} correct of {attempted}</div>
           </div>
           <div className="rounded-2xl bg-primary-foreground/10 p-4 backdrop-blur-sm">
             <div className="text-xs opacity-85 font-medium">Time Utilized</div>
             <div className="font-display text-3xl font-black mt-0.5">
-              {Math.floor(attempt.time_spent_seconds / 60)}<span className="text-base font-semibold opacity-75">m</span>
+              {Math.floor((attempt.time_spent_seconds || 0) / 60)}<span className="text-base font-semibold opacity-75">m</span>
             </div>
             <div className="mt-1 text-xs opacity-85">of {attempt.tests?.duration_minutes}m allowed</div>
           </div>
           <div className="rounded-2xl bg-primary-foreground/10 p-4 backdrop-blur-sm">
             <div className="text-xs opacity-85 font-medium">Attempt Ratio</div>
             <div className="font-display text-3xl font-black mt-0.5">{attempted}<span className="text-base font-semibold opacity-75">/{total}</span></div>
-            <div className="mt-1 text-xs opacity-85">{attempt.unattempted_count} questions skipped</div>
+            <div className="mt-1 text-xs opacity-85">{finalUnattempted} questions skipped</div>
           </div>
         </div>
       </div>
@@ -210,9 +233,9 @@ function Result() {
       {/* Answer counts summary */}
       <div className="grid gap-3 sm:grid-cols-3">
         {[
-          { Icon: CheckCircle2, l: "Correct (+4)", v: attempt.correct_count, pts: "+" + (attempt.correct_count * 4) + " Marks", c: "bg-success/10 text-success border-success/20" },
-          { Icon: XCircle, l: "Incorrect (-1)", v: attempt.wrong_count, pts: "-" + (attempt.wrong_count * 1) + " Marks", c: "bg-destructive/10 text-destructive border-destructive/20" },
-          { Icon: MinusCircle, l: "Unattempted (0)", v: attempt.unattempted_count, pts: "0 Marks", c: "bg-secondary text-muted-foreground border-border" },
+          { Icon: CheckCircle2, l: "Correct (+4)", v: finalCorrect, pts: "+" + (finalCorrect * marksPerCorrect) + " Marks", c: "bg-success/10 text-success border-success/20" },
+          { Icon: XCircle, l: "Incorrect (-1)", v: finalWrong, pts: "-" + (finalWrong * Math.abs(marksPerWrong)) + " Marks", c: "bg-destructive/10 text-destructive border-destructive/20" },
+          { Icon: MinusCircle, l: "Unattempted (0)", v: finalUnattempted, pts: "0 Marks", c: "bg-secondary text-muted-foreground border-border" },
         ].map(({ Icon, l, v, pts, c }) => (
           <div key={l} className={`rounded-2xl border p-4 flex items-center justify-between ${c}`}>
             <div className="flex items-center gap-3">

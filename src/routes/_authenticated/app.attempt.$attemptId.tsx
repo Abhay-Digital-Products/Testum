@@ -465,15 +465,13 @@ function Player() {
 
       for (const q of questions) {
         const a = currentAnswers[q.id];
-        const hasSelected =
-          a &&
-          (a.status === "answered" || a.status === "answered_marked") &&
-          a.selected_option;
+        const selected = a?.selected_option ? String(a.selected_option).trim() : null;
+        const hasSelected = Boolean(selected);
 
         let is_correct: boolean | null = null;
         if (!hasSelected) {
           unattempted++;
-        } else if (a.selected_option === q.correct_option) {
+        } else if (selected?.toUpperCase() === String(q.correct_option || "").trim().toUpperCase()) {
           correct++;
           is_correct = true;
         } else {
@@ -484,8 +482,8 @@ function Player() {
         updates.push({
           attempt_id: attemptId,
           question_id: q.id,
-          selected_option: a?.selected_option ?? null,
-          status: a?.status ?? "not_answered",
+          selected_option: selected,
+          status: hasSelected ? (a?.status === "answered_marked" ? "answered_marked" : "answered") : (a?.status ?? "not_answered"),
           time_spent_seconds: a?.time_spent_seconds ?? 0,
           is_correct,
         });
