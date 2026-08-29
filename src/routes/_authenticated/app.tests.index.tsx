@@ -312,11 +312,7 @@ function Tests() {
                                 <span className="font-display text-sm sm:text-base font-bold text-foreground group-hover:text-primary transition-colors leading-snug">
                                   {t.title}
                                 </span>
-                                {isFreeTest && (
-                                  <span className="inline-flex items-center gap-0.5 rounded-md bg-emerald-100 px-1.5 py-0.5 text-[9px] font-extrabold text-emerald-800 border border-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-300">
-                                    <Sparkles className="h-2.5 w-2.5" /> FREE
-                                  </span>
-                                )}
+
                               </div>
                               <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground flex-wrap">
                                 <span className="font-medium text-foreground/70 truncate max-w-[160px] sm:max-w-none">{t.test_series?.title ?? "NEET Test Series"}</span>
@@ -327,15 +323,13 @@ function Tests() {
 
                             {/* Status badge — top right on mobile */}
                             <span className={"shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider " + (
-                              isFreeTest
-                                ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                                : !unlocked
+                              !unlocked
                                 ? "bg-muted text-muted-foreground border border-border"
                                 : done
                                 ? "bg-success/15 text-success border border-success/30"
                                 : "bg-primary/10 text-primary border border-primary/20"
                             )}>
-                              {isFreeTest ? "Free" : !unlocked ? "Locked" : done ? "Done" : "Ready"}
+                              {!unlocked ? "Locked" : done ? "Done" : "Ready"}
                             </span>
                           </div>
 
