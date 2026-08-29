@@ -44,7 +44,7 @@ function AdminStudents() {
     const t = q.trim().toLowerCase();
     if (!t) return rows;
     return rows.filter((r) =>
-      [r.full_name, r.mobile, r.student_class, r.id].some((v: any) => String(v ?? "").toLowerCase().includes(t)),
+      [r.full_name, r.mobile, r.student_class, r.id, r.user_id].some((v: any) => String(v ?? "").toLowerCase().includes(t)),
     );
   }, [rows, q]);
 
@@ -84,8 +84,9 @@ function AdminStudents() {
 
       <div className="space-y-2">
         {filtered.map((p) => {
-          const list = (ents[p.id] ?? []).filter((e) => !e.expires_at || new Date(e.expires_at) > new Date());
-          const isAdmin = admins.has(p.id);
+          const studentUserId = p.user_id || p.id;
+          const list = (ents[studentUserId] ?? ents[p.id] ?? []).filter((e) => !e.expires_at || new Date(e.expires_at) > new Date());
+          const isAdmin = admins.has(studentUserId) || admins.has(p.id);
           return (
             <div key={p.id} className="rounded-2xl border bg-card p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -102,14 +103,14 @@ function AdminStudents() {
                     {list.map((e) => (
                       <span key={e.id} className="inline-flex items-center gap-1 rounded-lg bg-success/10 px-2 py-0.5 text-[11px] font-semibold capitalize text-success">
                         {e.plan_code}
-                        <button onClick={() => revoke(e.id)} aria-label={`Revoke ${e.plan_code}`} className="text-destructive"><Trash2 className="h-3 w-3" /></button>
+                        <button onClick={() => revoke(e.id)} aria-label={`Revoke ${e.plan_code}`} className="text-destructive hover:scale-110 transition-transform"><Trash2 className="h-3 w-3" /></button>
                       </span>
                     ))}
                   </div>
                 </div>
                 <div className="flex shrink-0 gap-1">
                   <Button size="sm" variant="outline" onClick={() => setGrantFor(p)}><KeyRound className="mr-1 h-3.5 w-3.5" />Grant</Button>
-                  <Button size="sm" variant={isAdmin ? "secondary" : "ghost"} onClick={() => toggleAdmin(p.id, !isAdmin)}>
+                  <Button size="sm" variant={isAdmin ? "secondary" : "ghost"} onClick={() => toggleAdmin(studentUserId, !isAdmin)}>
                     <ShieldCheck className="mr-1 h-3.5 w-3.5" />{isAdmin ? "Remove admin" : "Make admin"}
                   </Button>
                 </div>
@@ -133,11 +134,24 @@ function GrantDialog({ student, onClose, onDone }: { student: any | null; onClos
     e.preventDefault();
     if (!student) return;
     setBusy(true);
+
+    const studentUserId = student.user_id || student.id;
     const expires = days > 0 ? new Date(Date.now() + days * 86400000).toISOString() : null;
-    const { error } = await supabase.from("entitlements").insert({ user_id: student.id, plan_code: plan as any, expires_at: expires });
+
+    // Use upsert on user_id, plan_code so existing active entitlements are cleanly updated
+    const { error } = await supabase.from("entitlements").upsert(
+      {
+        user_id: studentUserId,
+        plan_code: plan as any,
+        expires_at: expires,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,plan_code" }
+    );
+
     setBusy(false);
     if (error) return toast.error(error.message);
-    toast.success("Access granted");
+    toast.success(`Access granted (${plan.toUpperCase()} plan)`);
     onClose();
     onDone();
   };

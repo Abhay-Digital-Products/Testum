@@ -56,9 +56,27 @@ export const createCheckout = createServerFn({ method: "POST" })
     const { data: profile } = await supabase
       .from("profiles")
       .select("full_name, mobile")
-      .eq("user_id" as any, userId)
+      .or(`user_id.eq.${userId},id.eq.${userId}`)
       .maybeSingle();
 
+    const userMetadata = (claims as any)?.user_metadata ?? {};
+    const rawMobile =
+      profile?.mobile ||
+      userMetadata.mobile ||
+      userMetadata.phone ||
+      (claims as any)?.phone ||
+      "";
+
+    const phone = rawMobile.replace(/\D/g, "").slice(-10) || "9999999999";
+    const customerName =
+      profile?.full_name ||
+      userMetadata.full_name ||
+      userMetadata.name ||
+      ((claims as { email?: string })?.email?.split("@")[0] ?? "Testum Student");
+    const customerEmail =
+      (claims as { email?: string })?.email ||
+      userMetadata.email ||
+      "student@testum.in";
 
     const cfOrderId = `TESTUM_${data.planCode}_${Date.now()}_${userId.slice(0, 8)}`;
 
@@ -74,8 +92,6 @@ export const createCheckout = createServerFn({ method: "POST" })
       .single();
     if (orderErr || !order) throw new Error(orderErr?.message ?? "Could not create order");
 
-    const phone = (profile?.mobile ?? "").replace(/\D/g, "").slice(-10) || "9999999999";
-
     const res = await fetch(`${cfBase()}/orders`, {
       method: "POST",
       headers: cfHeaders(),
@@ -85,8 +101,8 @@ export const createCheckout = createServerFn({ method: "POST" })
         order_currency: "INR",
         customer_details: {
           customer_id: userId.replace(/-/g, ""),
-          customer_name: profile?.full_name ?? "Testum Student",
-          customer_email: (claims as { email?: string })?.email ?? "student@testum.in",
+          customer_name: customerName,
+          customer_email: customerEmail,
           customer_phone: phone,
         },
         order_meta: {

@@ -23,10 +23,16 @@ function AdminOrders() {
     (async () => {
       const [{ data: o }, { data: p }] = await Promise.all([
         supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(500),
-        supabase.from("profiles").select("id, full_name, mobile"),
+        supabase.from("profiles").select("id, user_id, full_name, mobile"),
       ]);
       setOrders(o ?? []);
-      setNames(Object.fromEntries((p ?? []).map((x: any) => [x.id, `${x.full_name ?? "Student"}${x.mobile ? ` · ${x.mobile}` : ""}`])));
+      const nameMap: Record<string, string> = {};
+      for (const x of p ?? []) {
+        const label = `${x.full_name ?? "Student"}${x.mobile ? ` · ${x.mobile}` : ""}`;
+        if (x.user_id) nameMap[x.user_id] = label;
+        if (x.id) nameMap[x.id] = label;
+      }
+      setNames(nameMap);
       setLoading(false);
     })();
   }, []);

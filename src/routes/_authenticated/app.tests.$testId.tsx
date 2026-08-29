@@ -56,8 +56,14 @@ function Instructions() {
     })();
   }, [testId]);
 
-  const planCode = (test?.test_series?.plan_code ?? test?.test_series?.kind ?? null) as PlanCode | null;
-  const isFreeTest = !planCode || test?.test_series?.plan_code === null;
+  const rawPlan = test?.test_series?.plan_code ?? null;
+  const isFreeTest =
+    Boolean(test?.is_free) ||
+    rawPlan === "free" ||
+    !rawPlan ||
+    (test?.test_series?.title ?? "").toLowerCase().includes("free") ||
+    (test?.title ?? "").toLowerCase().includes("free");
+  const planCode = isFreeTest ? null : (rawPlan as PlanCode | null);
   const unlocked = isFreeTest || (!entLoading && hasAccess(planCode, isFreeTest));
 
   const startAttempt = async () => {

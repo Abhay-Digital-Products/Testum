@@ -447,7 +447,16 @@ function TestForm({ series, existing, onSaved, onClose }: { series: any[]; exist
           {/* Series Selection */}
           <div>
             <Label className="text-sm font-semibold">Test Series</Label>
-            <Select value={seriesId} onValueChange={setSeriesId}>
+            <Select
+              value={seriesId}
+              onValueChange={(id) => {
+                setSeriesId(id);
+                const s = series.find((item) => item.id === id);
+                if (s && (!s.plan_code || s.plan_code === "free" || s.title?.toLowerCase().includes("free"))) {
+                  setIsFree(true);
+                }
+              }}
+            >
               <SelectTrigger className="mt-1"><SelectValue placeholder="Select parent series" /></SelectTrigger>
               <SelectContent>
                 {series.map((s) => (

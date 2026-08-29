@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { OfferPopup } from "@/components/offer-popup";
 
 export const Route = createFileRoute("/_authenticated/app")({
   component: AppLayout,
@@ -89,6 +90,7 @@ function AppLayout() {
         <Outlet />
       </main>
       <BottomNav />
+      <OfferPopup />
     </div>
   );
 }

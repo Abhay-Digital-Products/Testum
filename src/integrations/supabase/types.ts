@@ -203,6 +203,48 @@ export type Database = {
           },
         ]
       }
+      offer_popups: {
+        Row: {
+          button_text: string | null
+          coupon_code: string | null
+          created_at: string
+          display_frequency: string
+          id: string
+          image_url: string
+          is_active: boolean
+          target_audience: string
+          target_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          button_text?: string | null
+          coupon_code?: string | null
+          created_at?: string
+          display_frequency?: string
+          id?: string
+          image_url: string
+          is_active?: boolean
+          target_audience?: string
+          target_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          button_text?: string | null
+          coupon_code?: string | null
+          created_at?: string
+          display_frequency?: string
+          id?: string
+          image_url?: string
+          is_active?: boolean
+          target_audience?: string
+          target_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           amount_inr: number

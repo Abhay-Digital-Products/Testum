@@ -3,303 +3,1143 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Clock, LayoutGrid, Flag, CircleX, ChevronLeft, ChevronRight, Save } from "lucide-react";
+import {
+  Clock,
+  LayoutGrid,
+  Flag,
+  CircleX,
+  ChevronLeft,
+  ChevronRight,
+  Save,
+  CheckCircle2,
+  AlertCircle,
+  HelpCircle,
+  Maximize2,
+  ZoomIn,
+  Sparkles,
+  Layers,
+  ArrowRight,
+  ShieldAlert,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/app/attempt/$attemptId")({
-  head: () => ({ meta: [{ title: "In Progress  -  Testum CBT" }] }),
+  head: () => ({ meta: [{ title: "CBT Exam Engine  -  Testum" }] }),
   component: Player,
 });
 
+type Option = { key: string; text?: string; image_url?: string };
+
 type Q = {
-  id: string; order_index: number; subject: string; chapter: string | null;
-  question_image_url: string | null; question_text: string | null;
-  option_type: "image" | "text"; options: Array<{ key: string; text?: string; image_url?: string }>;
+  id: string;
+  order_index: number;
+  subject: string;
+  chapter: string | null;
+  question_image_url: string | null;
+  question_text: string | null;
+  option_type: "image" | "text";
+  options: Option[];
   correct_option: string;
 };
-type A = { question_id: string; selected_option: string | null; status: "not_visited"|"not_answered"|"answered"|"marked"|"answered_marked"; time_spent_seconds: number };
+
+type AnswerStatus =
+  | "not_visited"
+  | "not_answered"
+  | "answered"
+  | "marked"
+  | "answered_marked";
+
+type A = {
+  question_id: string;
+  selected_option: string | null;
+  status: AnswerStatus;
+  time_spent_seconds: number;
+};
 
 function Player() {
   const { attemptId } = Route.useParams();
   const navigate = useNavigate();
+
   const [test, setTest] = useState<any>(null);
   const [questions, setQuestions] = useState<Q[]>([]);
   const [answers, setAnswers] = useState<Record<string, A>>({});
-  const [idx, setIdx] = useState(0);
-  const [subject, setSubject] = useState<string>("all");
+  
+  // Current active global question index (0 to questions.length - 1)
+  const [currentGlobalIdx, setCurrentGlobalIdx] = useState<number>(() => {
+    try {
+      const saved = sessionStorage.getItem(`testum_attempt_${attemptId}_idx`);
+      return saved ? parseInt(saved, 10) || 0 : 0;
+    } catch {
+      return 0;
+    }
+  });
+
+  // Filter subject for the Question Palette: "all" or specific subject
+  const [selectedSubject, setSelectedSubject] = useState<string>("all");
   const [remaining, setRemaining] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
+
   const questionStart = useRef<number>(Date.now());
+  const answersRef = useRef<Record<string, A>>({});
+  answersRef.current = answers;
 
+  // 1. Initial Load & Restore
   useEffect(() => {
-    (async () => {
-      const { data: att, error: attErr } = await supabase.from("attempts")
-        .select("id, test_id, started_at, status, tests(id, title, duration_minutes, total_questions, marks_correct, marks_wrong)")
-        .eq("id", attemptId).maybeSingle();
-      if (attErr || !att) { toast.error("Attempt not found"); navigate({ to: "/app/tests" }); return; }
-      if (att.status === "submitted") { navigate({ to: "/app/result/$attemptId", params: { attemptId } }); return; }
-      setTest(att.tests);
-      const { data: qs } = await supabase.from("questions")
-        .select("id, order_index, subject, chapter, question_image_url, question_text, option_type, options, correct_option")
-        .eq("test_id", att.test_id).order("order_index");
-      setQuestions((qs as any) ?? []);
-      const { data: ans } = await supabase.from("answers").select("question_id, selected_option, status, time_spent_seconds").eq("attempt_id", attemptId);
-      const map: Record<string, A> = {};
-      (ans ?? []).forEach((a: any) => { map[a.question_id] = a as any; });
-      setAnswers(map);
+    let isMounted = true;
 
-      const dur = (att.tests?.duration_minutes ?? 180) * 60;
-      const elapsed = Math.floor((Date.now() - new Date(att.started_at).getTime()) / 1000);
-      setRemaining(Math.max(0, dur - elapsed));
-      setLoading(false);
-      questionStart.current = Date.now();
-    })();
+    async function loadAttempt() {
+      try {
+        const { data: att, error: attErr } = await supabase
+          .from("attempts")
+          .select("id, test_id, started_at, status, tests(id, title, duration_minutes, total_questions, marks_correct, marks_wrong)")
+          .eq("id", attemptId)
+          .maybeSingle();
+
+        if (attErr || !att) {
+          toast.error("Attempt not found");
+          navigate({ to: "/app/tests" });
+          return;
+        }
+
+        if (att.status === "submitted") {
+          navigate({ to: "/app/result/$attemptId", params: { attemptId } });
+          return;
+        }
+
+        if (!isMounted) return;
+        setTest(att.tests);
+
+        // Fetch questions
+        const { data: qs } = await supabase
+          .from("questions")
+          .select("id, order_index, subject, chapter, question_image_url, question_text, option_type, options, correct_option")
+          .eq("test_id", att.test_id)
+          .order("order_index");
+
+        const qList: Q[] = (qs as any) ?? [];
+        if (isMounted) setQuestions(qList);
+
+        // Fetch saved answers
+        const { data: ans } = await supabase
+          .from("answers")
+          .select("question_id, selected_option, status, time_spent_seconds")
+          .eq("attempt_id", attemptId);
+
+        // Load local cache if available for instant restore
+        let cachedAnswers: Record<string, A> = {};
+        try {
+          const raw = sessionStorage.getItem(`testum_attempt_${attemptId}_answers`);
+          if (raw) cachedAnswers = JSON.parse(raw);
+        } catch (e) {
+          console.error("Cache read error:", e);
+        }
+
+        const map: Record<string, A> = { ...cachedAnswers };
+        (ans ?? []).forEach((a: any) => {
+          // Merge with DB data
+          if (!map[a.question_id] || map[a.question_id].status === "not_visited") {
+            map[a.question_id] = a as A;
+          }
+        });
+
+        // Initialize any missing questions as not_visited
+        qList.forEach((q) => {
+          if (!map[q.id]) {
+            map[q.id] = {
+              question_id: q.id,
+              selected_option: null,
+              status: "not_visited",
+              time_spent_seconds: 0,
+            };
+          }
+        });
+
+        if (isMounted) {
+          setAnswers(map);
+          answersRef.current = map;
+
+          // Compute remaining time
+          const durationSec = (att.tests?.duration_minutes ?? 180) * 60;
+          const startedAtTime = new Date(att.started_at).getTime();
+          const elapsedSec = Math.floor((Date.now() - startedAtTime) / 1000);
+          const rem = Math.max(0, durationSec - elapsedSec);
+          setRemaining(rem);
+
+          // Restore or validate current index
+          let targetIdx = currentGlobalIdx;
+          try {
+            const saved = sessionStorage.getItem(`testum_attempt_${attemptId}_idx`);
+            if (saved !== null) {
+              const parsed = parseInt(saved, 10);
+              if (parsed >= 0 && parsed < qList.length) {
+                targetIdx = parsed;
+              }
+            }
+          } catch {}
+
+          if (targetIdx >= qList.length) targetIdx = 0;
+          setCurrentGlobalIdx(targetIdx);
+
+          // Mark the starting question as visited
+          if (qList[targetIdx]) {
+            const startQId = qList[targetIdx].id;
+            const existing = map[startQId];
+            if (!existing || existing.status === "not_visited") {
+              const updated: A = {
+                question_id: startQId,
+                selected_option: existing?.selected_option ?? null,
+                status: "not_answered",
+                time_spent_seconds: existing?.time_spent_seconds ?? 0,
+              };
+              map[startQId] = updated;
+              setAnswers({ ...map });
+              supabase
+                .from("answers")
+                .update({ status: "not_answered" })
+                .eq("attempt_id", attemptId)
+                .eq("question_id", startQId)
+                .then(() => {});
+            }
+          }
+
+          setLoading(false);
+          questionStart.current = Date.now();
+        }
+      } catch (err) {
+        console.error("Failed to load attempt:", err);
+      }
+    }
+
+    loadAttempt();
+
+    return () => {
+      isMounted = false;
+    };
   }, [attemptId, navigate]);
 
-  // Timer
+  // Persist current question index across screen switches / mode changes
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        `testum_attempt_${attemptId}_idx`,
+        currentGlobalIdx.toString()
+      );
+    } catch {}
+  }, [attemptId, currentGlobalIdx]);
+
+  // Timer Countdown
   useEffect(() => {
     if (loading || remaining <= 0) return;
-    const id = setInterval(() => setRemaining(r => r - 1), 1000);
-    return () => clearInterval(id);
+    const interval = setInterval(() => {
+      setRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
   }, [loading, remaining]);
 
-  const submit = useCallback(async (auto = false) => {
-    if (submitting) return;
-    setSubmitting(true);
-    // Grade
-    let correct = 0, wrong = 0, unattempted = 0;
-    const updates: any[] = [];
-    for (const q of questions) {
-      const a = answers[q.id];
-      const answered = a && (a.status === "answered" || a.status === "answered_marked") && a.selected_option;
-      let is_correct: boolean | null = null;
-      if (!answered) { unattempted++; }
-      else if (a!.selected_option === q.correct_option) { correct++; is_correct = true; }
-      else { wrong++; is_correct = false; }
-      updates.push({ attempt_id: attemptId, question_id: q.id, selected_option: a?.selected_option ?? null, status: a?.status ?? "not_answered", time_spent_seconds: a?.time_spent_seconds ?? 0, is_correct });
+  // Auto-submit when time expires
+  useEffect(() => {
+    if (!loading && remaining === 0) {
+      submitTest(true);
     }
-    const score = correct * (test?.marks_correct ?? 4) + wrong * (test?.marks_wrong ?? -1);
-    const { error: upErr } = await supabase.from("answers").upsert(updates, { onConflict: "attempt_id,question_id" });
-    if (upErr) console.error(upErr);
-    const { data: att } = await supabase.from("attempts").select("started_at").eq("id", attemptId).maybeSingle();
-    const timeSpent = att ? Math.floor((Date.now() - new Date(att.started_at).getTime()) / 1000) : 0;
-    await supabase.from("attempts").update({ status: "submitted", submitted_at: new Date().toISOString(), score, correct_count: correct, wrong_count: wrong, unattempted_count: unattempted, time_spent_seconds: timeSpent }).eq("id", attemptId);
-    if (auto) toast.info("Time's up  -  auto-submitted");
-    navigate({ to: "/app/result/$attemptId", params: { attemptId } });
-  }, [submitting, questions, answers, attemptId, test, navigate]);
+  }, [remaining, loading]);
 
-  // auto-submit on timeout
-  useEffect(() => { if (!loading && remaining === 0) submit(true); }, [remaining, loading, submit]);
+  // Subject list extracted from questions
+  const subjects = useMemo(() => {
+    return Array.from(new Set(questions.map((q) => q.subject))).filter(Boolean);
+  }, [questions]);
 
-  const visible = useMemo(() => subject === "all" ? questions : questions.filter(q => q.subject === subject), [questions, subject]);
-  const current = visible[idx];
+  // Current active question
+  const currentQuestion = questions[currentGlobalIdx];
 
-  useEffect(() => { if (current) markVisited(current.id); }, [current?.id]); // eslint-disable-line
+  // Helper to persist answer updates both in state, sessionStorage cache & DB
+  const persistAnswer = useCallback(
+    (qId: string, patch: Partial<A>) => {
+      setAnswers((prev) => {
+        const currentA = prev[qId] ?? {
+          question_id: qId,
+          selected_option: null,
+          status: "not_visited" as const,
+          time_spent_seconds: 0,
+        };
+        const nextA: A = { ...currentA, ...patch };
+        const nextMap = { ...prev, [qId]: nextA };
+        answersRef.current = nextMap;
 
-  function persistAnswer(qId: string, patch: Partial<A>) {
-    setAnswers(prev => {
-      const now = prev[qId] ?? { question_id: qId, selected_option: null, status: "not_visited" as const, time_spent_seconds: 0 };
-      const next: A = { ...now, ...patch };
-      supabase.from("answers").update({ selected_option: next.selected_option, status: next.status, time_spent_seconds: next.time_spent_seconds }).eq("attempt_id", attemptId).eq("question_id", qId).then(() => {});
-      return { ...prev, [qId]: next };
-    });
-  }
-  function markVisited(qId: string) {
-    const a = answers[qId];
-    if (!a || a.status === "not_visited") persistAnswer(qId, { status: "not_answered" });
-    questionStart.current = Date.now();
-  }
-  function addTime(qId: string) {
+        // Write to local session cache
+        try {
+          sessionStorage.setItem(
+            `testum_attempt_${attemptId}_answers`,
+            JSON.stringify(nextMap)
+          );
+        } catch {}
+
+        // Background update to Supabase
+        supabase
+          .from("answers")
+          .upsert(
+            {
+              attempt_id: attemptId,
+              question_id: qId,
+              selected_option: nextA.selected_option,
+              status: nextA.status,
+              time_spent_seconds: nextA.time_spent_seconds,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "attempt_id,question_id" }
+          )
+          .then(() => {});
+
+        return nextMap;
+      });
+    },
+    [attemptId]
+  );
+
+  // Time spent tracker on current question
+  const recordCurrentTime = useCallback(() => {
+    if (!currentQuestion) return;
     const delta = Math.floor((Date.now() - questionStart.current) / 1000);
-    const a = answers[qId];
-    persistAnswer(qId, { time_spent_seconds: (a?.time_spent_seconds ?? 0) + delta });
-  }
-  function selectOption(key: string) {
-    if (!current) return;
-    const a = answers[current.id];
-    const nextStatus = a?.status === "marked" || a?.status === "answered_marked" ? "answered_marked" : "answered";
-    persistAnswer(current.id, { selected_option: key, status: nextStatus });
-  }
-  function clearResponse() {
-    if (!current) return;
-    const a = answers[current.id];
-    const nextStatus = a?.status === "answered_marked" || a?.status === "marked" ? "marked" : "not_answered";
-    persistAnswer(current.id, { selected_option: null, status: nextStatus });
-  }
-  function saveNext() {
-    if (!current) return;
-    addTime(current.id);
-    const a = answers[current.id];
-    if (a?.selected_option) persistAnswer(current.id, { status: a?.status === "answered_marked" ? "answered_marked" : "answered" });
-    else persistAnswer(current.id, { status: a?.status === "marked" ? "marked" : "not_answered" });
-    setIdx(i => Math.min(visible.length - 1, i + 1));
-  }
-  function markNext() {
-    if (!current) return;
-    addTime(current.id);
-    const a = answers[current.id];
-    persistAnswer(current.id, { status: a?.selected_option ? "answered_marked" : "marked" });
-    setIdx(i => Math.min(visible.length - 1, i + 1));
+    if (delta > 0) {
+      const a = answersRef.current[currentQuestion.id];
+      persistAnswer(currentQuestion.id, {
+        time_spent_seconds: (a?.time_spent_seconds ?? 0) + delta,
+      });
+    }
+    questionStart.current = Date.now();
+  }, [currentQuestion, persistAnswer]);
+
+  // Navigate to a specific question globally
+  const goToQuestion = useCallback(
+    (targetIdx: number) => {
+      if (targetIdx < 0 || targetIdx >= questions.length) return;
+      recordCurrentTime();
+
+      const nextQ = questions[targetIdx];
+      if (nextQ) {
+        const a = answersRef.current[nextQ.id];
+        if (!a || a.status === "not_visited") {
+          persistAnswer(nextQ.id, { status: "not_answered" });
+        }
+      }
+
+      setCurrentGlobalIdx(targetIdx);
+      questionStart.current = Date.now();
+    },
+    [questions, recordCurrentTime, persistAnswer]
+  );
+
+  // Option selection
+  const selectOption = (key: string) => {
+    if (!currentQuestion) return;
+    const a = answers[currentQuestion.id];
+    const nextStatus: AnswerStatus =
+      a?.status === "marked" || a?.status === "answered_marked"
+        ? "answered_marked"
+        : "answered";
+
+    persistAnswer(currentQuestion.id, {
+      selected_option: key,
+      status: nextStatus,
+    });
+  };
+
+  // Clear current question response
+  const clearResponse = () => {
+    if (!currentQuestion) return;
+    const a = answers[currentQuestion.id];
+    const nextStatus: AnswerStatus =
+      a?.status === "answered_marked" || a?.status === "marked"
+        ? "marked"
+        : "not_answered";
+
+    persistAnswer(currentQuestion.id, {
+      selected_option: null,
+      status: nextStatus,
+    });
+    toast.info("Response cleared");
+  };
+
+  // Save & Next (Green)
+  const saveAndNext = () => {
+    if (!currentQuestion) return;
+    recordCurrentTime();
+    const a = answers[currentQuestion.id];
+
+    if (a?.selected_option) {
+      persistAnswer(currentQuestion.id, {
+        status: a?.status === "answered_marked" ? "answered_marked" : "answered",
+      });
+    } else {
+      persistAnswer(currentQuestion.id, {
+        status: a?.status === "marked" ? "marked" : "not_answered",
+      });
+    }
+
+    if (currentGlobalIdx < questions.length - 1) {
+      goToQuestion(currentGlobalIdx + 1);
+    } else {
+      toast.success("Reached the last question. You can review or submit.");
+    }
+  };
+
+  // Mark for Review & Next (Purple / Purple+Dot)
+  const markForReviewAndNext = () => {
+    if (!currentQuestion) return;
+    recordCurrentTime();
+    const a = answers[currentQuestion.id];
+
+    persistAnswer(currentQuestion.id, {
+      status: a?.selected_option ? "answered_marked" : "marked",
+    });
+
+    if (currentGlobalIdx < questions.length - 1) {
+      goToQuestion(currentGlobalIdx + 1);
+    } else {
+      toast.info("Marked for review (last question).");
+    }
+  };
+
+  // Go to Previous question
+  const goPrevious = () => {
+    if (currentGlobalIdx > 0) {
+      goToQuestion(currentGlobalIdx - 1);
+    }
+  };
+
+  // Submit test
+  const submitTest = useCallback(
+    async (auto = false) => {
+      if (submitting) return;
+      setSubmitting(true);
+      recordCurrentTime();
+
+      let correct = 0;
+      let wrong = 0;
+      let unattempted = 0;
+      const updates: any[] = [];
+
+      const currentAnswers = answersRef.current;
+
+      for (const q of questions) {
+        const a = currentAnswers[q.id];
+        const hasSelected =
+          a &&
+          (a.status === "answered" || a.status === "answered_marked") &&
+          a.selected_option;
+
+        let is_correct: boolean | null = null;
+        if (!hasSelected) {
+          unattempted++;
+        } else if (a.selected_option === q.correct_option) {
+          correct++;
+          is_correct = true;
+        } else {
+          wrong++;
+          is_correct = false;
+        }
+
+        updates.push({
+          attempt_id: attemptId,
+          question_id: q.id,
+          selected_option: a?.selected_option ?? null,
+          status: a?.status ?? "not_answered",
+          time_spent_seconds: a?.time_spent_seconds ?? 0,
+          is_correct,
+        });
+      }
+
+      const score =
+        correct * (test?.marks_correct ?? 4) +
+        wrong * (test?.marks_wrong ?? -1);
+
+      try {
+        await supabase
+          .from("answers")
+          .upsert(updates, { onConflict: "attempt_id,question_id" });
+
+        const { data: att } = await supabase
+          .from("attempts")
+          .select("started_at")
+          .eq("id", attemptId)
+          .maybeSingle();
+
+        const timeSpent = att
+          ? Math.floor((Date.now() - new Date(att.started_at).getTime()) / 1000)
+          : 0;
+
+        await supabase
+          .from("attempts")
+          .update({
+            status: "submitted",
+            submitted_at: new Date().toISOString(),
+            score,
+            correct_count: correct,
+            wrong_count: wrong,
+            unattempted_count: unattempted,
+            time_spent_seconds: timeSpent,
+          })
+          .eq("id", attemptId);
+
+        // Clear local cache
+        sessionStorage.removeItem(`testum_attempt_${attemptId}_idx`);
+        sessionStorage.removeItem(`testum_attempt_${attemptId}_answers`);
+
+        if (auto) {
+          toast.info("Time is up! Your test has been submitted automatically.");
+        } else {
+          toast.success("Test submitted successfully!");
+        }
+
+        navigate({ to: "/app/result/$attemptId", params: { attemptId } });
+      } catch (err: any) {
+        toast.error("Failed to submit test: " + err.message);
+        setSubmitting(false);
+      }
+    },
+    [submitting, recordCurrentTime, questions, attemptId, test, navigate]
+  );
+
+  // Keyboard Shortcuts (1-4 or A-D, Enter for Save & Next, Space for Clear)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (loading || submitting || sheetOpen) return;
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+
+      const key = e.key.toUpperCase();
+      if (["A", "B", "C", "D"].includes(key)) {
+        selectOption(key);
+      } else if (["1", "2", "3", "4"].includes(e.key)) {
+        const optionMap: Record<string, string> = { "1": "A", "2": "B", "3": "C", "4": "D" };
+        selectOption(optionMap[e.key]);
+      } else if (e.key === "ArrowRight") {
+        saveAndNext();
+      } else if (e.key === "ArrowLeft") {
+        goPrevious();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [loading, submitting, sheetOpen, selectOption, saveAndNext, goPrevious]);
+
+  // Compute summary stats
+  const summary = useMemo(() => {
+    let answered = 0;
+    let notAnswered = 0;
+    let marked = 0;
+    let answeredMarked = 0;
+    let notVisited = 0;
+
+    for (const q of questions) {
+      const s = answers[q.id]?.status ?? "not_visited";
+      if (s === "answered") answered++;
+      else if (s === "not_answered") notAnswered++;
+      else if (s === "marked") marked++;
+      else if (s === "answered_marked") answeredMarked++;
+      else notVisited++;
+    }
+
+    return { answered, notAnswered, marked, answeredMarked, notVisited };
+  }, [questions, answers]);
+
+  if (loading) {
+    return (
+      <div className="grid min-h-[100dvh] place-items-center bg-background text-sm text-muted-foreground">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-9 w-9 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="font-semibold text-foreground">Loading NTA CBT Engine…</p>
+        </div>
+      </div>
+    );
   }
 
-  if (loading) return <div className="grid min-h-[100dvh] place-items-center text-sm text-muted-foreground">Loading test…</div>;
-  if (!current) return <div className="grid min-h-[100dvh] place-items-center text-sm">No questions.</div>;
+  if (!currentQuestion) {
+    return (
+      <div className="grid min-h-[100dvh] place-items-center bg-background p-4 text-center">
+        <div>
+          <AlertCircle className="mx-auto h-12 w-12 text-destructive mb-3" />
+          <h2 className="text-lg font-bold">No questions found in this test</h2>
+          <Button asChild className="mt-4">
+            <a href="/app/tests">Back to Tests</a>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
-  const mm = String(Math.floor(remaining / 60)).padStart(2, "0");
-  const ss = String(remaining % 60).padStart(2, "0");
+  // Format time display
   const hh = String(Math.floor(remaining / 3600)).padStart(2, "0");
-  const summary = summarize(questions, answers);
+  const mm = String(Math.floor((remaining % 3600) / 60)).padStart(2, "0");
+  const ss = String(remaining % 60).padStart(2, "0");
+
+  const currentAnswer = answers[currentQuestion.id];
+  const isTimeCritical = remaining < 300; // Under 5 mins
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-secondary/30">
-      {/* Top bar */}
-      <header className="sticky top-0 z-30 border-b bg-card">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-3">
-          <div className="min-w-0 flex-1">
-            <div className="truncate font-display text-sm font-semibold sm:text-base">{test?.title}</div>
-            
-          </div>
-          <div className={cn("flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-mono text-sm font-semibold tabular-nums",
-            remaining < 300 ? "bg-destructive text-destructive-foreground animate-pulse" : "bg-primary text-primary-foreground")}>
-            <Clock className="h-3.5 w-3.5" /> {hh}:{mm}:{ss}
-          </div>
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button size="icon" variant="outline" className="md:hidden"><LayoutGrid className="h-4 w-4"/></Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[85vw] max-w-sm p-0">
-              <SheetHeader className="p-4 border-b"><SheetTitle>Question Palette</SheetTitle></SheetHeader>
-              <Palette questions={questions} answers={answers} visible={visible} idx={idx} setIdx={setIdx} subject={subject} setSubject={setSubject} summary={summary} />
-            </SheetContent>
-          </Sheet>
-        </div>
-      </header>
-
-      {/* Body */}
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col md:flex-row md:gap-4 md:p-4">
-        <main className="flex-1 md:rounded-2xl md:border md:bg-card md:p-5 bg-card p-4">
-          <div className="mb-3 flex items-center justify-between text-xs text-muted-foreground">
-            <span>Question <b className="text-foreground">{idx + 1}</b> of {visible.length}</span>
-            <span className="uppercase font-semibold tracking-wider">{current.subject}{current.chapter ? ` · ${current.chapter}` : ""}</span>
+    <div className="flex min-h-[100dvh] flex-col bg-slate-50 dark:bg-slate-950 select-none">
+      {/* Top Fixed Header */}
+      <header className="sticky top-0 z-30 border-b bg-card/95 backdrop-blur shadow-xs">
+        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-3 sm:px-4">
+          {/* Left: Test Title & Subject Chips */}
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="min-w-0">
+              <h1 className="truncate font-display text-sm font-bold text-foreground sm:text-base">
+                {test?.title || "NEET CBT Exam"}
+              </h1>
+              <div className="flex items-center gap-1 text-[11px] text-muted-foreground truncate">
+                <span className="capitalize font-semibold text-primary">
+                  {currentQuestion.subject}
+                </span>
+                {currentQuestion.chapter && (
+                  <span>· {currentQuestion.chapter}</span>
+                )}
+              </div>
+            </div>
           </div>
 
-          {current.question_image_url && (
-            <img src={current.question_image_url} alt={`Question ${current.order_index}`} className="mb-4 max-w-full rounded-xl border" />
-          )}
-          {current.question_text && <p className="mb-4 whitespace-pre-wrap text-base leading-relaxed">{current.question_text}</p>}
+          {/* Center/Right: Timer & Actions */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Live Countdown Timer */}
+            <div
+              className={cn(
+                "flex items-center gap-1.5 rounded-xl px-3 py-1.5 font-mono text-sm font-bold tabular-nums shadow-xs transition-colors",
+                isTimeCritical
+                  ? "bg-rose-600 text-white animate-pulse"
+                  : remaining < 900
+                  ? "bg-amber-500 text-white"
+                  : "bg-slate-900 text-white dark:bg-slate-800"
+              )}
+            >
+              <Clock className="h-3.5 w-3.5" />
+              <span>
+                {hh}:{mm}:{ss}
+              </span>
+            </div>
 
-          <div className="grid gap-2 sm:grid-cols-2">
-            {current.options.map(op => {
-              const selected = answers[current.id]?.selected_option === op.key;
-              return (
-                <button key={op.key} onClick={() => selectOption(op.key)} className={cn(
-                  "flex items-start gap-3 rounded-xl border p-3 text-left transition touch-manipulation",
-                  selected ? "border-primary bg-primary/10 ring-2 ring-primary" : "hover:border-primary/50"
-                )}>
-                  <span className={cn("grid h-7 w-7 shrink-0 place-items-center rounded-full border text-sm font-bold",
-                    selected ? "bg-primary text-primary-foreground border-primary" : "bg-secondary text-foreground")}>{op.key}</span>
-                  <div className="min-w-0 flex-1 pt-0.5">
-                    {op.image_url && <img src={op.image_url} alt={`Option ${op.key}`} className="max-h-40 rounded" />}
-                    {op.text && <span className="text-sm">{op.text}</span>}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+            {/* Mobile Question Palette Drawer Trigger */}
+            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="md:hidden rounded-xl border-primary/30 text-primary hover:bg-primary/10 gap-1.5 px-2.5 font-semibold"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                  <span className="text-xs font-bold">
+                    {summary.answered}/{questions.length}
+                  </span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[88vw] max-w-sm p-0 flex flex-col">
+                <SheetHeader className="p-4 border-b bg-card">
+                  <SheetTitle className="text-sm font-bold flex items-center justify-between">
+                    <span>Question Palette</span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {summary.answered} of {questions.length} Answered
+                    </span>
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="flex-1 overflow-hidden">
+                  <QuestionPalette
+                    questions={questions}
+                    answers={answers}
+                    currentGlobalIdx={currentGlobalIdx}
+                    onSelectQuestion={(idx) => {
+                      goToQuestion(idx);
+                      setSheetOpen(false);
+                    }}
+                    selectedSubject={selectedSubject}
+                    setSelectedSubject={setSelectedSubject}
+                    subjects={subjects}
+                    summary={summary}
+                  />
+                </div>
+              </SheetContent>
+            </Sheet>
 
-          <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Button variant="secondary" size="sm" onClick={clearResponse}><CircleX className="mr-1 h-3.5 w-3.5"/>Clear</Button>
-            <Button variant="outline" size="sm" onClick={markNext}><Flag className="mr-1 h-3.5 w-3.5"/>Mark & Next</Button>
-            <Button variant="outline" size="sm" onClick={() => { addTime(current.id); setIdx(i => Math.max(0, i - 1)); }}><ChevronLeft className="mr-1 h-3.5 w-3.5"/>Previous</Button>
-            <Button size="sm" onClick={saveNext}><Save className="mr-1 h-3.5 w-3.5"/>Save & Next<ChevronRight className="h-3.5 w-3.5"/></Button>
-          </div>
-
-          <div className="mt-4 flex items-center justify-between border-t pt-4">
-            <div className="text-xs text-muted-foreground">Answered: <b className="text-success">{summary.answered}</b> · Marked: <b className="text-primary">{summary.marked}</b> · Skipped: <b className="text-destructive">{summary.notAnswered}</b></div>
+            {/* Submit Test Button */}
             <AlertDialog>
-              <AlertDialogTrigger asChild><Button variant="destructive" size="sm">Submit test</Button></AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="rounded-xl font-bold shadow-xs px-3"
+                  disabled={submitting}
+                >
+                  Submit
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="max-w-md rounded-2xl">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Submit your test?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    You have answered {summary.answered} of {questions.length} questions. Once submitted you cannot change your answers.
+                  <AlertDialogTitle className="font-display text-lg font-bold flex items-center gap-2">
+                    <ShieldAlert className="h-5 w-5 text-amber-500" />
+                    Confirm Test Submission
+                  </AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-3 pt-2 text-sm text-foreground">
+                      <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/60 p-3 text-xs">
+                        <div>
+                          Total Questions: <strong>{questions.length}</strong>
+                        </div>
+                        <div>
+                          Answered:{" "}
+                          <strong className="text-emerald-600">
+                            {summary.answered}
+                          </strong>
+                        </div>
+                        <div>
+                          Marked for Review:{" "}
+                          <strong className="text-purple-600">
+                            {summary.marked + summary.answeredMarked}
+                          </strong>
+                        </div>
+                        <div>
+                          Unanswered / Skipped:{" "}
+                          <strong className="text-rose-600">
+                            {summary.notAnswered + summary.notVisited}
+                          </strong>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Are you sure you want to submit? Once submitted, your answers cannot be modified.
+                      </p>
+                    </div>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Continue test</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => submit(false)}>Yes, submit</AlertDialogAction>
+                <AlertDialogFooter className="gap-2 sm:gap-0">
+                  <AlertDialogCancel className="rounded-xl">Continue Test</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => submitTest(false)}
+                    className="rounded-xl bg-destructive hover:bg-destructive/90 font-bold"
+                  >
+                    Yes, Submit Test
+                  </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
           </div>
+        </div>
+
+        {/* Subject Navigation Tabs Bar */}
+        {subjects.length > 1 && (
+          <div className="border-t bg-card/60 px-3 sm:px-4 py-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            <span className="text-[11px] font-bold text-muted-foreground uppercase mr-1">
+              Sections:
+            </span>
+            <button
+              onClick={() => setSelectedSubject("all")}
+              className={cn(
+                "rounded-lg px-2.5 py-1 text-xs font-semibold transition-all shrink-0",
+                selectedSubject === "all"
+                  ? "bg-primary text-primary-foreground shadow-xs"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              )}
+            >
+              All Sections ({questions.length})
+            </button>
+            {subjects.map((s) => {
+              const count = questions.filter((q) => q.subject === s).length;
+              const isCurrentQSubject = currentQuestion.subject === s;
+              return (
+                <button
+                  key={s}
+                  onClick={() => {
+                    setSelectedSubject(s);
+                    // Find first question of this subject if current is not in it
+                    if (!isCurrentQSubject) {
+                      const firstIdx = questions.findIndex(
+                        (q) => q.subject === s
+                      );
+                      if (firstIdx !== -1) goToQuestion(firstIdx);
+                    }
+                  }}
+                  className={cn(
+                    "rounded-lg px-2.5 py-1 text-xs font-semibold capitalize transition-all shrink-0 flex items-center gap-1",
+                    selectedSubject === s
+                      ? "bg-primary text-primary-foreground shadow-xs"
+                      : isCurrentQSubject
+                      ? "bg-primary/10 text-primary border border-primary/30"
+                      : "bg-secondary text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <span>{s}</span>
+                  <span className="text-[10px] opacity-75">({count})</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </header>
+
+      {/* Main Examination Layout */}
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col md:flex-row md:gap-4 md:p-4">
+        {/* Left / Center: Question Paper Workspace */}
+        <main className="flex-1 flex flex-col justify-between rounded-none md:rounded-3xl border-y md:border bg-card p-4 sm:p-6 shadow-xs">
+          <div>
+            {/* Question Info Bar */}
+            <div className="mb-4 flex items-center justify-between pb-3 border-b">
+              <div className="flex items-center gap-2">
+                <span className="rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
+                  Question {currentGlobalIdx + 1} of {questions.length}
+                </span>
+                <span className="rounded-lg bg-secondary px-2 py-1 text-[11px] font-semibold uppercase text-muted-foreground">
+                  {currentQuestion.subject}
+                </span>
+              </div>
+              <div className="text-xs font-semibold text-muted-foreground flex items-center gap-2">
+                <span className="text-emerald-600 font-bold">
+                  +{test?.marks_correct ?? 4}
+                </span>
+                <span>/</span>
+                <span className="text-rose-600 font-bold">
+                  {test?.marks_wrong ?? -1}
+                </span>
+              </div>
+            </div>
+
+            {/* Question Image (if any) */}
+            {currentQuestion.question_image_url && (
+              <div className="relative mb-5 group max-w-2xl rounded-2xl border bg-muted/20 p-2 overflow-hidden">
+                <img
+                  src={currentQuestion.question_image_url}
+                  alt={`Question ${currentQuestion.order_index}`}
+                  className="max-h-[350px] w-auto max-w-full rounded-xl object-contain mx-auto"
+                />
+                <button
+                  type="button"
+                  onClick={() => setZoomImage(currentQuestion.question_image_url)}
+                  className="absolute top-3 right-3 grid h-8 w-8 place-items-center rounded-lg bg-black/70 text-white shadow hover:bg-black transition"
+                  title="Zoom Image"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Question Text */}
+            {currentQuestion.question_text && (
+              <div className="mb-6 text-base font-medium leading-relaxed text-foreground whitespace-pre-wrap">
+                {currentQuestion.question_text}
+              </div>
+            )}
+
+            {/* Options List */}
+            <div className="grid gap-3 sm:grid-cols-2 pt-2">
+              {currentQuestion.options.map((op) => {
+                const isSelected = currentAnswer?.selected_option === op.key;
+                return (
+                  <button
+                    key={op.key}
+                    type="button"
+                    onClick={() => selectOption(op.key)}
+                    className={cn(
+                      "group flex items-start gap-3 rounded-2xl border p-3.5 text-left transition-all duration-150 touch-manipulation cursor-pointer",
+                      isSelected
+                        ? "border-primary bg-primary/10 shadow-sm ring-2 ring-primary ring-offset-1 dark:ring-offset-card"
+                        : "bg-card hover:border-primary/50 hover:bg-secondary/40"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "grid h-8 w-8 shrink-0 place-items-center rounded-xl font-display text-sm font-bold transition-colors",
+                        isSelected
+                          ? "bg-primary text-primary-foreground shadow-xs"
+                          : "bg-secondary text-foreground group-hover:bg-primary/20 group-hover:text-primary"
+                      )}
+                    >
+                      {op.key}
+                    </span>
+                    <div className="min-w-0 flex-1 pt-1 leading-relaxed text-sm font-medium text-foreground">
+                      {op.image_url && (
+                        <img
+                          src={op.image_url}
+                          alt={`Option ${op.key}`}
+                          className="max-h-40 rounded-lg mb-1 object-contain"
+                        />
+                      )}
+                      {op.text && <span>{op.text}</span>}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Bottom Action Buttons Bar */}
+          <div className="mt-8 pt-4 border-t space-y-3">
+            {/* Quick Status Bar */}
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center gap-3">
+                <span>
+                  Status:{" "}
+                  <strong
+                    className={cn(
+                      "font-semibold capitalize",
+                      currentAnswer?.status === "answered" && "text-emerald-600",
+                      currentAnswer?.status === "marked" && "text-purple-600",
+                      currentAnswer?.status === "answered_marked" && "text-purple-600",
+                      currentAnswer?.status === "not_answered" && "text-rose-600",
+                      currentAnswer?.status === "not_visited" && "text-slate-500"
+                    )}
+                  >
+                    {currentAnswer?.status === "answered_marked"
+                      ? "Answered & Marked"
+                      : currentAnswer?.status?.replace("_", " ") ?? "Not Answered"}
+                  </strong>
+                </span>
+                {currentAnswer?.selected_option && (
+                  <span>
+                    Selected: <strong>{currentAnswer.selected_option}</strong>
+                  </span>
+                )}
+              </div>
+
+              <div className="hidden sm:flex items-center gap-1.5 text-[11px]">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <span>Auto-saved live</span>
+              </div>
+            </div>
+
+            {/* Buttons Grid */}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <Button
+                variant="outline"
+                size="default"
+                onClick={clearResponse}
+                className="rounded-xl border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 font-semibold"
+              >
+                <CircleX className="mr-1.5 h-4 w-4" /> Clear
+              </Button>
+
+              <Button
+                variant="secondary"
+                size="default"
+                onClick={markForReviewAndNext}
+                className="rounded-xl font-semibold bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-950 dark:text-purple-300"
+              >
+                <Flag className="mr-1.5 h-4 w-4" /> Mark & Next
+              </Button>
+
+              <Button
+                variant="outline"
+                size="default"
+                onClick={goPrevious}
+                disabled={currentGlobalIdx === 0}
+                className="rounded-xl font-semibold"
+              >
+                <ChevronLeft className="mr-1.5 h-4 w-4" /> Previous
+              </Button>
+
+              <Button
+                size="default"
+                onClick={saveAndNext}
+                className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold shadow-md"
+              >
+                <Save className="mr-1.5 h-4 w-4" /> Save & Next
+              </Button>
+            </div>
+          </div>
         </main>
 
-        <aside className="hidden md:block w-72 shrink-0 rounded-2xl border bg-card">
-          <Palette questions={questions} answers={answers} visible={visible} idx={idx} setIdx={setIdx} subject={subject} setSubject={setSubject} summary={summary} />
+        {/* Right Desktop Question Palette Sidebar */}
+        <aside className="hidden md:flex w-80 shrink-0 flex-col rounded-3xl border bg-card shadow-xs overflow-hidden">
+          <div className="p-4 border-b bg-card">
+            <h3 className="font-display font-bold text-sm text-foreground flex items-center justify-between">
+              <span>Question Palette</span>
+              <span className="text-xs font-semibold text-primary">
+                {summary.answered}/{questions.length} Done
+              </span>
+            </h3>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <QuestionPalette
+              questions={questions}
+              answers={answers}
+              currentGlobalIdx={currentGlobalIdx}
+              onSelectQuestion={(idx) => goToQuestion(idx)}
+              selectedSubject={selectedSubject}
+              setSelectedSubject={setSelectedSubject}
+              subjects={subjects}
+              summary={summary}
+            />
+          </div>
         </aside>
       </div>
+
+      {/* Image Lightbox Modal */}
+      {zoomImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in"
+          onClick={() => setZoomImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl bg-card p-2">
+            <img
+              src={zoomImage}
+              alt="Zoomed Question"
+              className="max-h-[85vh] w-auto max-w-full object-contain rounded-xl"
+            />
+            <button
+              onClick={() => setZoomImage(null)}
+              className="absolute top-4 right-4 rounded-full bg-black/70 p-2 text-white hover:bg-black"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function summarize(qs: Q[], ans: Record<string, A>) {
-  let answered=0, notAnswered=0, marked=0, answeredMarked=0, notVisited=0;
-  for (const q of qs) {
-    const s = ans[q.id]?.status ?? "not_visited";
-    if (s==="answered") answered++;
-    else if (s==="not_answered") notAnswered++;
-    else if (s==="marked") marked++;
-    else if (s==="answered_marked") answeredMarked++;
-    else notVisited++;
-  }
-  return { answered, notAnswered, marked, answeredMarked, notVisited };
-}
+// -------------------------------------------------------------
+// Component: Question Palette (Accurate NTA Grid & Colors)
+// -------------------------------------------------------------
+function QuestionPalette({
+  questions,
+  answers,
+  currentGlobalIdx,
+  onSelectQuestion,
+  selectedSubject,
+  setSelectedSubject,
+  subjects,
+  summary,
+}: {
+  questions: Q[];
+  answers: Record<string, A>;
+  currentGlobalIdx: number;
+  onSelectQuestion: (globalIdx: number) => void;
+  selectedSubject: string;
+  setSelectedSubject: (s: string) => void;
+  subjects: string[];
+  summary: {
+    answered: number;
+    notAnswered: number;
+    marked: number;
+    answeredMarked: number;
+    notVisited: number;
+  };
+}) {
+  // Filtered list for current subject view
+  const visibleQuestions = useMemo(() => {
+    return questions.map((q, globalIdx) => ({ q, globalIdx })).filter(({ q }) => {
+      if (selectedSubject === "all") return true;
+      return q.subject === selectedSubject;
+    });
+  }, [questions, selectedSubject]);
 
-function Palette({ questions, answers, visible, idx, setIdx, subject, setSubject, summary }: any) {
-  const subjects = Array.from(new Set(questions.map((q: Q) => q.subject)));
-  const legend = [
-    { c: "bg-palette-answered text-white", l: "Answered", v: summary.answered },
-    { c: "bg-palette-not-answered text-white", l: "Not Answered", v: summary.notAnswered },
-    { c: "bg-palette-marked text-white", l: "Marked", v: summary.marked },
-    { c: "bg-palette-answered-marked text-white", l: "Ans+Marked", v: summary.answeredMarked },
-    { c: "bg-palette-not-visited text-foreground border", l: "Not Visited", v: summary.notVisited },
+  const legendItems = [
+    {
+      label: "Answered",
+      count: summary.answered,
+      cls: "bg-emerald-600 text-white font-bold",
+    },
+    {
+      label: "Not Answered",
+      count: summary.notAnswered,
+      cls: "bg-rose-600 text-white font-bold",
+    },
+    {
+      label: "Marked for Review",
+      count: summary.marked,
+      cls: "bg-purple-600 text-white font-bold",
+    },
+    {
+      label: "Ans & Marked",
+      count: summary.answeredMarked,
+      cls: "bg-purple-600 text-white font-bold relative after:content-[''] after:absolute after:bottom-0.5 after:right-0.5 after:h-2 after:w-2 after:rounded-full after:bg-emerald-400",
+    },
+    {
+      label: "Not Visited",
+      count: summary.notVisited,
+      cls: "bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-800 dark:text-slate-300 font-semibold",
+    },
   ];
+
   return (
-    <div className="flex h-full flex-col">
-      <div className="border-b p-3">
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Subject</div>
-        <div className="flex flex-wrap gap-1">
-          <button onClick={() => setSubject("all")} className={cn("rounded-md px-2.5 py-1 text-xs font-medium", subject==="all"?"bg-primary text-primary-foreground":"bg-secondary")}>All</button>
-          {subjects.map((s: any) => (
-            <button key={s} onClick={() => setSubject(s)} className={cn("rounded-md px-2.5 py-1 text-xs font-medium capitalize", subject===s?"bg-primary text-primary-foreground":"bg-secondary")}>{s}</button>
-          ))}
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-1.5 border-b p-3 text-[11px]">
-        {legend.map(l => (
-          <div key={l.l} className="flex items-center gap-1.5">
-            <span className={cn("grid h-5 w-5 place-items-center rounded text-[10px] font-bold", l.c)}>{l.v}</span>
-            <span className="text-muted-foreground">{l.l}</span>
+    <div className="flex h-full flex-col overflow-hidden">
+      {/* Legend Grid */}
+      <div className="grid grid-cols-2 gap-2 border-b p-3 bg-muted/20 text-xs">
+        {legendItems.map((item) => (
+          <div key={item.label} className="flex items-center gap-2">
+            <span
+              className={cn(
+                "grid h-6 w-6 shrink-0 place-items-center rounded-lg text-[11px] shadow-2xs",
+                item.cls
+              )}
+            >
+              {item.count}
+            </span>
+            <span className="text-[11px] text-muted-foreground truncate font-medium">
+              {item.label}
+            </span>
           </div>
         ))}
       </div>
-      <div className="flex-1 overflow-y-auto p-3">
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Questions</div>
-        <div className="grid grid-cols-6 gap-1.5">
-          {visible.map((q: Q, i: number) => {
-            const s = answers[q.id]?.status ?? "not_visited";
-            const cls =
-              s==="answered" ? "bg-palette-answered text-white" :
-              s==="not_answered" ? "bg-palette-not-answered text-white" :
-              s==="marked" ? "bg-palette-marked text-white" :
-              s==="answered_marked" ? "bg-palette-answered-marked text-white relative after:absolute after:top-0.5 after:right-0.5 after:h-1.5 after:w-1.5 after:rounded-full after:bg-white" :
-              "bg-palette-not-visited text-foreground border";
+
+      {/* Questions Matrix Grid */}
+      <div className="flex-1 overflow-y-auto p-3.5 space-y-3">
+        <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <span>
+            {selectedSubject === "all" ? "All Questions" : `${selectedSubject} Questions`}
+          </span>
+          <span>{visibleQuestions.length} Total</span>
+        </div>
+
+        <div className="grid grid-cols-5 sm:grid-cols-6 gap-2">
+          {visibleQuestions.map(({ q, globalIdx }) => {
+            const a = answers[q.id];
+            const status: AnswerStatus = a?.status ?? "not_visited";
+            const isCurrent = globalIdx === currentGlobalIdx;
+
+            // NTA Style Palette Colors
+            let statusColor = "bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200";
+            if (status === "answered") {
+              statusColor = "bg-emerald-600 text-white font-bold shadow-xs hover:bg-emerald-700";
+            } else if (status === "not_answered") {
+              statusColor = "bg-rose-600 text-white font-bold shadow-xs hover:bg-rose-700";
+            } else if (status === "marked") {
+              statusColor = "bg-purple-600 text-white font-bold shadow-xs hover:bg-purple-700";
+            } else if (status === "answered_marked") {
+              statusColor = "bg-purple-600 text-white font-bold shadow-xs relative hover:bg-purple-700 after:content-[''] after:absolute after:bottom-0.5 after:right-0.5 after:h-2 after:w-2 after:rounded-full after:bg-emerald-400";
+            }
+
             return (
-              <button key={q.id} onClick={() => setIdx(i)} className={cn("aspect-square rounded-md text-xs font-bold transition", cls, i===idx && "ring-2 ring-offset-1 ring-primary")}>
-                {i + 1}
+              <button
+                key={q.id}
+                type="button"
+                onClick={() => onSelectQuestion(globalIdx)}
+                className={cn(
+                  "aspect-square rounded-xl text-xs font-bold transition-all duration-150 flex items-center justify-center cursor-pointer touch-manipulation",
+                  statusColor,
+                  isCurrent &&
+                    "ring-3 ring-primary ring-offset-2 scale-105 z-10 dark:ring-offset-card"
+                )}
+                title={`Q${globalIdx + 1} (${q.subject}) - Status: ${status.replace("_", " ")}`}
+              >
+                {globalIdx + 1}
               </button>
             );
           })}

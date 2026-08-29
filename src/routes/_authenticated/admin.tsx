@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, ClipboardList, ArrowLeft, Users, IndianRupee, Tag } from "lucide-react";
+import { LayoutDashboard, ClipboardList, ArrowLeft, Users, IndianRupee, Tag, Megaphone } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -16,6 +16,7 @@ const NAV = [
   { to: "/admin/students", l: "Students", Icon: Users },
   { to: "/admin/orders", l: "Orders", Icon: IndianRupee },
   { to: "/admin/plans", l: "Plans", Icon: Tag },
+  { to: "/admin/offers", l: "Offer Popup", Icon: Megaphone },
 ];
 
 function AdminLayout() {
@@ -62,12 +63,13 @@ function AdminLayout() {
         <Outlet />
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t bg-background/95 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t bg-background/95 backdrop-blur md:hidden">
         {NAV.map((n) => {
           const active = n.exact ? path === n.to : path.startsWith(n.to);
           return (
-            <Link key={n.to} to={n.to as never} className={`flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${active ? "text-primary" : "text-muted-foreground"}`}>
-              <n.Icon className="h-5 w-5" />{n.l}
+            <Link key={n.to} to={n.to as never} className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${active ? "text-primary font-bold" : "text-muted-foreground"}`}>
+              <n.Icon className="h-4 w-4" />
+              <span className="truncate max-w-[50px]">{n.l.replace("Offer Popup", "Offers")}</span>
             </Link>
           );
         })}

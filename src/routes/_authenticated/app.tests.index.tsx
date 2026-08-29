@@ -94,13 +94,22 @@ function Tests() {
     })();
   }, []);
 
+  // Helper to accurately determine if a test is free
+  const checkIsFreeTest = (t: any) => {
+    if (!t) return false;
+    if (Boolean(t.is_free)) return true;
+    const plan = t.test_series?.plan_code ?? null;
+    if (!plan || plan === "free") return true;
+    const seriesTitle = (t.test_series?.title ?? "").toLowerCase();
+    const testTitle = (t.title ?? "").toLowerCase();
+    return seriesTitle.includes("free") || testTitle.includes("free");
+  };
+
   // Compute test counts per tab
   const counts = useMemo(() => {
     const res = { free: 0, chapter: 0, part: 0, full: 0 };
     for (const t of tests) {
-      const plan = t.test_series?.plan_code ?? null;
-      const isFree = Boolean(t.is_free || plan === "free" || !plan);
-      if (isFree) res.free++;
+      if (checkIsFreeTest(t)) res.free++;
       const kind = t.test_series?.kind;
       if (kind === "chapter") res.chapter++;
       else if (kind === "part") res.part++;
@@ -111,8 +120,7 @@ function Tests() {
 
   const filtered = useMemo(() => {
     return tests.filter((t) => {
-      const plan = t.test_series?.plan_code ?? null;
-      const isFreeTest = Boolean(t.is_free || plan === "free" || !plan);
+      const isFreeTest = checkIsFreeTest(t);
 
       if (tab === "free") {
         if (!isFreeTest) return false;
@@ -271,8 +279,8 @@ function Tests() {
                   const subj = t.test_series?.subject ?? "mixed";
                   const Icon = subjectIcon(subj);
                   const done = attemptedIds.has(t.id);
-                  const plan = (t.test_series?.plan_code ?? t.test_series?.kind ?? null) as PlanCode | null;
-                  const isFreeTest = Boolean(t.is_free || (plan as string) === "free" || !plan);
+                  const isFreeTest = checkIsFreeTest(t);
+                  const plan = isFreeTest ? null : ((t.test_series?.plan_code ?? t.test_series?.kind ?? null) as PlanCode | null);
                   const unlocked = isFreeTest || (!entLoading && hasAccess(plan, isFreeTest));
                   const totalMarks = (t.total_questions || 180) * (t.marks_correct || 4);
 
