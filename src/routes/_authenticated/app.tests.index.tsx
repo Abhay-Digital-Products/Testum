@@ -178,25 +178,28 @@ function Tests() {
 
       {/* Tabs Switcher */}
       <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
-        <div className="overflow-x-auto no-scrollbar -mx-1 px-1">
-          <div className="flex gap-2 min-w-max pb-1">
+        {/* Mobile: horizontal scroll | Desktop: full-width grid */}
+        <div className="rounded-2xl bg-muted/50 border border-border/60 p-1.5">
+          <div className="grid grid-cols-4 gap-1.5">
             {([
-              { key: "free",    label: "Free Test",           count: counts.free,    dot: "bg-emerald-500",  active: "bg-emerald-600 text-white shadow-md shadow-emerald-200 dark:shadow-emerald-900/40",  inactive: "bg-card border border-border text-emerald-700 dark:text-emerald-400 hover:border-emerald-400/60" },
-              { key: "chapter", label: "Chapter Test",        count: counts.chapter, dot: "bg-blue-500",     active: "bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-blue-900/40",              inactive: "bg-card border border-border text-foreground hover:border-blue-400/60" },
-              { key: "part",    label: "Part Test",           count: counts.part,    dot: "bg-amber-500",    active: "bg-amber-500 text-white shadow-md shadow-amber-200 dark:shadow-amber-900/40",            inactive: "bg-card border border-border text-foreground hover:border-amber-400/60" },
-              { key: "full",    label: "Full Syllabus Test",  count: counts.full,    dot: "bg-purple-500",   active: "bg-purple-600 text-white shadow-md shadow-purple-200 dark:shadow-purple-900/40",          inactive: "bg-card border border-border text-foreground hover:border-purple-400/60" },
-            ] as const).map(({ key, label, count, dot, active, inactive }) => (
+              { key: "free",    label: "Free Test",          shortLabel: "Free",    count: counts.free,    dot: "bg-emerald-500",  active: "bg-emerald-600 text-white shadow-md shadow-emerald-200 dark:shadow-emerald-900/40",  inactive: "text-emerald-700 dark:text-emerald-400 hover:bg-card hover:shadow-xs" },
+              { key: "chapter", label: "Chapter Test",       shortLabel: "Chapter", count: counts.chapter, dot: "bg-blue-500",     active: "bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-blue-900/40",              inactive: "text-foreground hover:bg-card hover:shadow-xs" },
+              { key: "part",    label: "Part Test",          shortLabel: "Part",    count: counts.part,    dot: "bg-amber-500",    active: "bg-amber-500 text-white shadow-md shadow-amber-200 dark:shadow-amber-900/40",            inactive: "text-foreground hover:bg-card hover:shadow-xs" },
+              { key: "full",    label: "Full Syllabus Test", shortLabel: "Full",    count: counts.full,    dot: "bg-purple-500",   active: "bg-purple-600 text-white shadow-md shadow-purple-200 dark:shadow-purple-900/40",          inactive: "text-foreground hover:bg-card hover:shadow-xs" },
+            ] as const).map(({ key, label, shortLabel, count, dot, active, inactive }) => (
               <button
                 key={key}
                 onClick={() => setTab(key as any)}
-                className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-bold whitespace-nowrap transition-all duration-200 ${
+                className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-2 rounded-xl px-2 sm:px-4 py-2 sm:py-2.5 text-xs font-bold transition-all duration-200 ${
                   tab === key ? active : inactive
                 }`}
               >
                 <span className={`h-2 w-2 rounded-full shrink-0 ${tab === key ? "bg-white/80" : dot}`} />
-                {label}
-                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-                  tab === key ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
+                {/* Short label on mobile, full label on sm+ */}
+                <span className="sm:hidden text-center leading-tight">{shortLabel}</span>
+                <span className="hidden sm:inline whitespace-nowrap">{label}</span>
+                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ml-auto ${
+                  tab === key ? "bg-white/20 text-white" : "bg-background/80 text-muted-foreground"
                 }`}>
                   {count}
                 </span>
@@ -204,6 +207,7 @@ function Tests() {
             ))}
           </div>
         </div>
+
 
         {/* Dynamic Category Hero Card */}
         <div className={"mt-3 rounded-2xl border bg-gradient-to-r p-3.5 sm:p-5 transition-all duration-300 " + activeConf.gradient}>

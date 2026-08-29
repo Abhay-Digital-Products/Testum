@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
 
 const signUpSchema = z.object({
@@ -29,6 +29,7 @@ export function AuthDialog({ trigger, defaultOpen, defaultTab = "signin", onOpen
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [studentClass, setStudentClass] = useState<"11th" | "12th" | "dropper" | "">("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
@@ -102,7 +103,27 @@ export function AuthDialog({ trigger, defaultOpen, defaultTab = "signin", onOpen
           <TabsContent value="signin">
             <form onSubmit={signIn} className="space-y-3 pt-3">
               <div><Label>Email</Label><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-              <div><Label>Password</Label><Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+              <div>
+                <Label>Password</Label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((p) => !p)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    tabIndex={-1}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
               <Button type="submit" className="w-full h-11" disabled={busy}>{busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Sign in</Button>
             </form>
           </TabsContent>
@@ -122,7 +143,28 @@ export function AuthDialog({ trigger, defaultOpen, defaultTab = "signin", onOpen
                 </Select>
               </div>
               <div><Label>Mobile number</Label><Input type="tel" inputMode="numeric" required maxLength={10} value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))} placeholder="9876543210" /></div>
-              <div><Label>Password (min 8)</Label><Input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+              <div>
+                <Label>Password (min 8)</Label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    minLength={8}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((p) => !p)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    tabIndex={-1}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
               <Button type="submit" className="w-full h-11" disabled={busy}>{busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Create account</Button>
             </form>
           </TabsContent>
