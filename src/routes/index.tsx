@@ -134,10 +134,10 @@ function Home() {
 
     supabase
       .from("tests")
-      .select("id, title, duration_minutes, total_questions, marks_correct, test_series(kind, title, plan_code)")
+      .select("id, title, duration_minutes, total_questions, marks_correct, is_free, test_series(kind, title, plan_code)")
       .order("created_at", { ascending: false })
       .then(({ data }: any) => {
-        const freeOnly = (data ?? []).filter((t: any) => !t.test_series?.plan_code || t.test_series?.plan_code === "free");
+        const freeOnly = (data ?? []).filter((t: any) => t.is_free || !t.test_series?.plan_code || t.test_series?.plan_code === "free");
         setFreeTests(freeOnly);
       })
       .catch(() => {});

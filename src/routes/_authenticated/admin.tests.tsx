@@ -275,7 +275,7 @@ function SeriesForm({ existing, onSaved, onClose }: { existing?: any; onSaved: (
   const [open, setOpen] = useState(!!existing);
   const [kind, setKind] = useState(existing?.kind ?? "chapter");
   const [subject, setSubject] = useState(existing?.subject ?? "mixed");
-  const [planCode, setPlanCode] = useState(existing?.plan_code ?? "chapter");
+  const [planCode, setPlanCode] = useState(existing ? (existing.plan_code ?? "free") : "chapter");
   const [title, setTitle] = useState(existing?.title ?? "");
   const [description, setDescription] = useState(existing?.description ?? "");
   const [busy, setBusy] = useState(false);
@@ -290,7 +290,7 @@ function SeriesForm({ existing, onSaved, onClose }: { existing?: any; onSaved: (
       subject,
       title: title.trim(),
       description: description.trim() || null,
-      plan_code: planCode,
+      plan_code: planCode === "free" ? null : planCode,
     };
     let error;
     if (existing) {
@@ -452,7 +452,7 @@ function TestForm({ series, existing, onSaved, onClose }: { series: any[]; exist
               <SelectContent>
                 {series.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
-                    {s.title} ({s.kind} - {s.plan_code === "free" ? "Free" : "Paid"})
+                    {s.title} ({s.kind} - {(!s.plan_code || s.plan_code === "free") ? "Free" : "Paid"})
                   </SelectItem>
                 ))}
               </SelectContent>
