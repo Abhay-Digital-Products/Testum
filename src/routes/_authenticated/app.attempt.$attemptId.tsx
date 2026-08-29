@@ -34,6 +34,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ExamImage } from "@/components/common/exam-image";
 
 export const Route = createFileRoute("/_authenticated/app/attempt/$attemptId")({
   head: () => ({ meta: [{ title: "CBT Exam Engine  -  Testum" }] }),
@@ -265,6 +266,26 @@ function Player() {
     }
   }, [remaining, loading]);
 
+  // Background session keep-alive: prevents token expiration during long (1-3 hr) exams
+  useEffect(() => {
+    const keepAliveInterval = setInterval(async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data?.session) {
+          // If token has less than 20 minutes left, refresh it silently in background
+          const expiresAt = data.session.expires_at ? data.session.expires_at * 1000 : 0;
+          if (!expiresAt || expiresAt < Date.now() + 1000 * 60 * 20) {
+            await supabase.auth.refreshSession();
+          }
+        }
+      } catch (err) {
+        console.warn("[session-keepalive] Silent refresh error:", err);
+      }
+    }, 1000 * 60 * 5); // check every 5 minutes
+
+    return () => clearInterval(keepAliveInterval);
+  }, []);
+
   // Subject list extracted from questions
   const subjects = useMemo(() => {
     return Array.from(new Set(questions.map((q) => q.subject))).filter(Boolean);
@@ -475,6 +496,14 @@ function Player() {
         wrong * (test?.marks_wrong ?? -1);
 
       try {
+        // Ensure fresh session before DB submission to avoid auth expirations
+        try {
+          const { data: sess } = await supabase.auth.getSession();
+          if (!sess?.session || (sess.session.expires_at && sess.session.expires_at * 1000 < Date.now() + 1000 * 60 * 10)) {
+            await supabase.auth.refreshSession();
+          }
+        } catch {}
+
         await supabase
           .from("answers")
           .upsert(updates, { onConflict: "attempt_id,question_id" });
@@ -795,147 +824,160 @@ function Player() {
       </header>
 
       {/* Main Examination Layout */}
-      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col md:flex-row md:gap-4 md:p-4">
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col lg:flex-row lg:items-start lg:gap-5 p-3 sm:p-4 md:p-5">
         {/* Left / Center: Question Paper Workspace */}
-        <main className="flex-1 flex flex-col justify-between rounded-none md:rounded-3xl border-y md:border bg-card p-3 sm:p-5 shadow-xs">
-          <div>
-            {/* Question Info Bar */}
-            <div className="mb-3 flex items-center justify-between pb-3 border-b">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="rounded-lg bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
-                  Q {currentGlobalIdx + 1}/{questions.length}
+        <main className="flex-1 flex flex-col rounded-2xl sm:rounded-3xl border bg-card p-4 sm:p-6 shadow-xs transition-all">
+          {/* Question Info & Marks Bar */}
+          <div className="mb-4 flex items-center justify-between pb-3 border-b border-border/80 gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="rounded-xl bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary tracking-wide">
+                Question {currentGlobalIdx + 1} of {questions.length}
+              </span>
+              <span className="rounded-xl bg-secondary px-2.5 py-1 text-xs font-semibold capitalize text-foreground border border-border/50">
+                {currentQuestion.subject}
+              </span>
+              {currentQuestion.chapter && (
+                <span className="text-xs text-muted-foreground hidden sm:inline-block">
+                  · {currentQuestion.chapter}
                 </span>
-                <span className="rounded-lg bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase text-muted-foreground hidden sm:inline-block">
-                  {currentQuestion.subject}
-                </span>
-              </div>
-              <div className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-                <span className="text-emerald-600 font-bold">+{test?.marks_correct ?? 4}</span>
-                <span className="text-slate-400">/</span>
-                <span className="text-rose-600 font-bold">{test?.marks_wrong ?? -1}</span>
-              </div>
+              )}
             </div>
-
-            {/* Question Image (if any) */}
-            {currentQuestion.question_image_url && (
-              <div className="relative mb-5 group max-w-2xl rounded-2xl border bg-muted/20 p-2 overflow-hidden">
-                <img
-                  src={currentQuestion.question_image_url}
-                  alt={`Question ${currentQuestion.order_index}`}
-                  className="max-h-[350px] w-auto max-w-full rounded-xl object-contain mx-auto"
-                />
-                <button
-                  type="button"
-                  onClick={() => setZoomImage(currentQuestion.question_image_url)}
-                  className="absolute top-3 right-3 grid h-8 w-8 place-items-center rounded-lg bg-black/70 text-white shadow hover:bg-black transition"
-                  title="Zoom Image"
-                >
-                  <ZoomIn className="h-4 w-4" />
-                </button>
-              </div>
-            )}
-
-            {/* Question Text */}
-            {currentQuestion.question_text && (
-              <div className="mb-4 text-sm sm:text-base font-medium leading-relaxed text-foreground whitespace-pre-wrap">
-                {currentQuestion.question_text}
-              </div>
-            )}
-
-            {/* Options List — single col on mobile, 2-col on sm+ */}
-            <div className="grid gap-2.5 sm:grid-cols-2 pt-1">
-              {currentQuestion.options.map((op) => {
-                const isSelected = currentAnswer?.selected_option === op.key;
-                return (
-                  <button
-                    key={op.key}
-                    type="button"
-                    onClick={() => selectOption(op.key)}
-                    className={cn(
-                      "group flex items-start gap-3 rounded-2xl border p-3.5 text-left transition-all duration-150 touch-manipulation cursor-pointer",
-                      isSelected
-                        ? "border-primary bg-primary/10 shadow-sm ring-2 ring-primary ring-offset-1 dark:ring-offset-card"
-                        : "bg-card hover:border-primary/50 hover:bg-secondary/40"
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "grid h-8 w-8 shrink-0 place-items-center rounded-xl font-display text-sm font-bold transition-colors",
-                        isSelected
-                          ? "bg-primary text-primary-foreground shadow-xs"
-                          : "bg-secondary text-foreground group-hover:bg-primary/20 group-hover:text-primary"
-                      )}
-                    >
-                      {op.key}
-                    </span>
-                    <div className="min-w-0 flex-1 pt-1 leading-relaxed text-sm font-medium text-foreground">
-                      {op.image_url && (
-                        <img
-                          src={op.image_url}
-                          alt={`Option ${op.key}`}
-                          className="max-h-40 rounded-lg mb-1 object-contain"
-                        />
-                      )}
-                      {op.text && <span>{op.text}</span>}
-                    </div>
-                  </button>
-                );
-              })}
+            <div className="text-xs font-semibold flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-muted/40 border">
+              <span className="text-emerald-600 font-bold">+{test?.marks_correct ?? 4}</span>
+              <span className="text-muted-foreground/40">/</span>
+              <span className="text-rose-600 font-bold">{test?.marks_wrong ?? -1}</span>
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium ml-0.5">Marks</span>
             </div>
           </div>
 
+          {/* Question Image (if any) with robust loader & zoom */}
+          {currentQuestion.question_image_url && (
+            <div className="mb-4">
+              <ExamImage
+                src={currentQuestion.question_image_url}
+                alt={`Question ${currentQuestion.order_index}`}
+                onZoom={(url) => setZoomImage(url)}
+                maxHeightClass="max-h-[260px] sm:max-h-[340px] md:max-h-[400px]"
+              />
+            </div>
+          )}
+
+          {/* Question Text */}
+          {currentQuestion.question_text && (
+            <div className="mb-5 text-sm sm:text-base font-medium leading-relaxed text-foreground whitespace-pre-wrap select-text">
+              {currentQuestion.question_text}
+            </div>
+          )}
+
+          {/* Options List — single col on mobile, 2-col on sm+ */}
+          <div className="grid gap-3 sm:grid-cols-2 pt-1">
+            {currentQuestion.options.map((op) => {
+              const isSelected = currentAnswer?.selected_option === op.key;
+              return (
+                <button
+                  key={op.key}
+                  type="button"
+                  onClick={() => selectOption(op.key)}
+                  className={cn(
+                    "group flex items-start gap-3 rounded-2xl border p-3.5 sm:p-4 text-left transition-all duration-150 touch-manipulation cursor-pointer text-foreground",
+                    isSelected
+                      ? "border-primary bg-primary/10 shadow-sm ring-2 ring-primary ring-offset-1 dark:ring-offset-card"
+                      : "bg-card hover:border-primary/50 hover:bg-secondary/40 active:scale-[0.99]"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "grid h-8 w-8 shrink-0 place-items-center rounded-xl font-display text-sm font-bold transition-colors",
+                      isSelected
+                        ? "bg-primary text-primary-foreground shadow-xs ring-2 ring-primary/30"
+                        : "bg-secondary text-foreground group-hover:bg-primary/20 group-hover:text-primary"
+                    )}
+                  >
+                    {op.key}
+                  </span>
+                  <div className="min-w-0 flex-1 pt-0.5 leading-relaxed text-sm font-medium">
+                    {op.image_url && (
+                      <ExamImage
+                        src={op.image_url}
+                        alt={`Option ${op.key}`}
+                        maxHeightClass="max-h-28 sm:max-h-36"
+                        showZoomButton={false}
+                        containerClassName="p-1 mb-2 border-0 bg-transparent"
+                      />
+                    )}
+                    {op.text && <span>{op.text}</span>}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
           {/* Bottom Action Buttons Bar */}
-          <div className="mt-5 pt-3 border-t space-y-2.5">
-            {/* Selected answer indicator */}
-            {currentAnswer?.selected_option && (
-              <div className="text-xs text-muted-foreground">
-                Selected: <strong className="text-foreground">{currentAnswer.selected_option}</strong>
+          <div className="mt-6 pt-4 border-t border-border/80 space-y-3">
+            {/* Status & selection preview */}
+            <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+              <div>
+                {currentAnswer?.selected_option ? (
+                  <span>
+                    Selected: <strong className="text-primary font-bold">{currentAnswer.selected_option}</strong>
+                  </span>
+                ) : (
+                  <span className="italic text-muted-foreground/80">No option selected</span>
+                )}
               </div>
-            )}
+              <div className="text-[11px] font-medium hidden sm:block text-muted-foreground">
+                Shortcuts: <kbd className="px-1.5 py-0.5 rounded bg-muted border font-mono">1-4</kbd> / <kbd className="px-1.5 py-0.5 rounded bg-muted border font-mono">A-D</kbd> or <kbd className="px-1.5 py-0.5 rounded bg-muted border font-mono">→</kbd> Next
+              </div>
+            </div>
 
-            {/* Mobile: 2-row layout | Desktop: 4-col single row */}
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={clearResponse}
-                className="h-11 rounded-xl border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 font-semibold text-xs sm:text-sm"
-              >
-                <CircleX className="mr-1 h-3.5 w-3.5" /> Clear
-              </Button>
+            {/* Responsive Action Buttons: 2x2 grid on small screens, 4-col flex on sm+ */}
+            <div className="grid grid-cols-2 gap-2.5 sm:flex sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 col-span-2 sm:col-span-1 w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  size="default"
+                  onClick={clearResponse}
+                  disabled={!currentAnswer?.selected_option}
+                  className="flex-1 sm:flex-initial h-11 rounded-xl border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 font-semibold text-xs sm:text-sm"
+                >
+                  <CircleX className="mr-1.5 h-4 w-4" /> Clear
+                </Button>
 
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={markForReviewAndNext}
-                className="h-11 rounded-xl font-semibold bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-950 dark:text-purple-300 text-xs sm:text-sm"
-              >
-                <Flag className="mr-1 h-3.5 w-3.5" /> Mark
-              </Button>
+                <Button
+                  variant="secondary"
+                  size="default"
+                  onClick={markForReviewAndNext}
+                  className="flex-1 sm:flex-initial h-11 rounded-xl font-semibold bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-950 dark:text-purple-300 text-xs sm:text-sm"
+                >
+                  <Flag className="mr-1.5 h-4 w-4" /> Mark for Review
+                </Button>
+              </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={goPrevious}
-                disabled={currentGlobalIdx === 0}
-                className="h-11 rounded-xl font-semibold text-xs sm:text-sm"
-              >
-                <ChevronLeft className="mr-1 h-3.5 w-3.5" /> Prev
-              </Button>
+              <div className="flex items-center gap-2 col-span-2 sm:col-span-1 w-full sm:w-auto justify-end">
+                <Button
+                  variant="outline"
+                  size="default"
+                  onClick={goPrevious}
+                  disabled={currentGlobalIdx === 0}
+                  className="flex-1 sm:flex-initial h-11 rounded-xl font-semibold text-xs sm:text-sm"
+                >
+                  <ChevronLeft className="mr-1 h-4 w-4" /> Prev
+                </Button>
 
-              <Button
-                size="sm"
-                onClick={saveAndNext}
-                className="h-11 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold shadow-md text-xs sm:text-sm"
-              >
-                <Save className="mr-1 h-3.5 w-3.5" /> Save & Next
-              </Button>
+                <Button
+                  size="default"
+                  onClick={saveAndNext}
+                  className="flex-1 sm:flex-initial h-11 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold shadow-sm text-xs sm:text-sm px-5"
+                >
+                  <Save className="mr-1.5 h-4 w-4" /> Save & Next
+                </Button>
+              </div>
             </div>
           </div>
         </main>
 
         {/* Right Desktop Question Palette Sidebar */}
-        <aside className="hidden md:flex w-80 shrink-0 flex-col rounded-3xl border bg-card shadow-xs overflow-hidden">
+        <aside className="hidden lg:flex w-80 shrink-0 flex-col rounded-3xl border bg-card shadow-xs overflow-hidden sticky top-20 max-h-[calc(100vh-100px)]">
           <div className="p-4 border-b bg-card">
             <h3 className="font-display font-bold text-sm text-foreground flex items-center justify-between">
               <span>Question Palette</span>
@@ -962,21 +1004,43 @@ function Player() {
       {/* Image Lightbox Modal */}
       {zoomImage && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3 sm:p-6 backdrop-blur-sm animate-in fade-in"
           onClick={() => setZoomImage(null)}
         >
-          <div className="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl bg-card p-2">
+          <div
+            className="relative max-w-5xl max-h-[92vh] overflow-hidden rounded-2xl bg-card p-3 shadow-2xl border"
+            onClick={(e) => e.stopPropagation()}
+          >
             <img
               src={zoomImage}
               alt="Zoomed Question"
-              className="max-h-[85vh] w-auto max-w-full object-contain rounded-xl"
+              referrerPolicy="no-referrer"
+              crossOrigin="anonymous"
+              className="max-h-[82vh] w-auto max-w-full object-contain rounded-xl select-none"
             />
-            <button
-              onClick={() => setZoomImage(null)}
-              className="absolute top-4 right-4 rounded-full bg-black/70 p-2 text-white hover:bg-black"
-            >
-              ✕
-            </button>
+            <div className="mt-3 flex items-center justify-between pt-2 border-t text-xs">
+              <span className="text-muted-foreground font-medium">Question Image Preview</span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  asChild
+                  className="h-8 rounded-lg text-xs"
+                >
+                  <a href={zoomImage} target="_blank" rel="noopener noreferrer">
+                    Open in New Tab
+                  </a>
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setZoomImage(null)}
+                  className="h-8 rounded-lg text-xs font-semibold"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -52,23 +52,35 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
       throw new Error('Unauthorized: No request headers available');
     }
 
-    const authHeader = request.headers.get('authorization');
-
-    if (!authHeader) {
-      throw new Error('Unauthorized: No authorization header provided');
+    let token = '';
+    const authHeader = request.headers.get('authorization') || request.headers.get('x-supabase-auth');
+    if (authHeader) {
+      token = authHeader.startsWith('Bearer ') ? authHeader.replace('Bearer ', '').trim() : authHeader.trim();
     }
 
-    if (!authHeader.startsWith('Bearer ')) {
-      throw new Error('Unauthorized: Only Bearer tokens are supported');
-    }
-
-    const token = authHeader.replace('Bearer ', '');
     if (!token) {
-      throw new Error('Unauthorized: No token provided');
+      const cookieHeader = request.headers.get('cookie') || '';
+      const match = cookieHeader.match(/sb-[a-zA-Z0-9_-]+-auth-token=([^;]+)/) || cookieHeader.match(/sb-access-token=([^;]+)/);
+      if (match && match[1]) {
+        try {
+          const decoded = decodeURIComponent(match[1]);
+          if (decoded.startsWith('{')) {
+            const parsed = JSON.parse(decoded);
+            token = parsed.access_token || parsed[0] || '';
+          } else if (decoded.startsWith('[')) {
+            const parsed = JSON.parse(decoded);
+            token = parsed[0] || '';
+          } else {
+            token = decoded;
+          }
+        } catch {
+          token = match[1];
+        }
+      }
     }
 
-    if (token.split('.').length !== 3) {
-      throw new Error('Unauthorized: Invalid token');
+    if (!token) {
+      throw new Error('Unauthorized: No authentication credentials found');
     }
 
     const supabase = createClient<Database>(

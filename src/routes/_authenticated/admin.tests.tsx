@@ -239,8 +239,7 @@ function AdminTests() {
                   <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-secondary text-sm font-bold">{q.order_index}</div>
                   <div className="min-w-0">
                     <div className="text-xs uppercase tracking-wide text-muted-foreground">{q.subject}{q.chapter ? (" · " + q.chapter) : ""}</div>
-                    {q.question_text && <div className="mt-1 line-clamp-2 text-sm">{q.question_text}</div>}
-                    {q.question_image_url && <img src={q.question_image_url} alt={"Question " + q.order_index} loading="lazy" className="mt-2 max-h-28 rounded-lg border" />}
+                    {q.question_image_url && <img src={q.question_image_url} alt={"Question " + q.order_index} referrerPolicy="no-referrer" crossOrigin="anonymous" loading="lazy" className="mt-2 max-h-28 rounded-lg border object-contain bg-muted/20" />}
                     <div className="mt-2 text-xs">Correct: <b className="text-success">{q.correct_option}</b> · {q.option_type} options{q.solution_image_url || q.solution_text ? " · solution added" : " · no solution"}{q.solution_video_url ? " · 🎥 video" : ""}</div>
                   </div>
                   <div className="flex shrink-0 flex-col gap-1">

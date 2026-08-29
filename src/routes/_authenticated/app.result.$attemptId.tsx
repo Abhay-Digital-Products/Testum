@@ -9,6 +9,8 @@ import {
   Loader2, Download, PlayCircle, Sparkles, BookOpen, Clock, Target, Calendar
 } from "lucide-react";
 import { toast } from "sonner";
+import { ExamImage } from "@/components/common/exam-image";
+
 
 export const Route = createFileRoute("/_authenticated/app/result/$attemptId")({
   head: () => ({ meta: [{ title: "Diagnostic Result & Report - Testum" }] }),
@@ -463,12 +465,11 @@ function Result() {
 
                     {/* Question image */}
                     {q.question_image_url && (
-                      <div className="rounded-xl border bg-background p-2 overflow-hidden max-w-2xl">
-                        <img
+                      <div className="max-w-2xl">
+                        <ExamImage
                           src={q.question_image_url}
                           alt={`Question ${q.order_index}`}
-                          className="max-h-[420px] w-auto max-w-full rounded-lg object-contain"
-                          loading="lazy"
+                          maxHeightClass="max-h-[360px] sm:max-h-[440px]"
                         />
                       </div>
                     )}
@@ -506,7 +507,13 @@ function Result() {
 
                               <div className="min-w-0 flex-1 pt-0.5 text-xs sm:text-sm">
                                 {op.image_url && (
-                                  <img src={op.image_url} alt={`Option ${op.key}`} className="max-h-32 rounded mb-1" />
+                                  <ExamImage
+                                    src={op.image_url}
+                                    alt={`Option ${op.key}`}
+                                    maxHeightClass="max-h-28"
+                                    showZoomButton={false}
+                                    containerClassName="p-1 mb-1.5 border-0 bg-transparent"
+                                  />
                                 )}
                                 <span>{op.text}</span>
                                 {isCorrectOpt && (
@@ -555,12 +562,11 @@ function Result() {
                         )}
 
                         {q.solution_image_url && (
-                          <div className="rounded-xl border bg-background p-2 overflow-hidden max-w-2xl">
-                            <img
+                          <div className="max-w-2xl">
+                            <ExamImage
                               src={q.solution_image_url}
                               alt={`Solution ${q.order_index}`}
-                              className="max-h-80 w-auto max-w-full rounded-lg object-contain"
-                              loading="lazy"
+                              maxHeightClass="max-h-80"
                             />
                           </div>
                         )}
