@@ -11,7 +11,9 @@ export const Route = createFileRoute("/api/public/cashfree-webhook")({
         const secret = process.env["CASHFREE_SECRET_KEY"];
         if (!secret) return new Response("Not configured", { status: 500 });
 
-        const expected = createHmac("sha256", secret).update(timestamp + raw).digest("base64");
+        const expected = createHmac("sha256", secret)
+          .update(timestamp + raw)
+          .digest("base64");
         const a = Buffer.from(signature);
         const b = Buffer.from(expected);
         if (a.length !== b.length || !timingSafeEqual(a, b)) {
@@ -54,7 +56,10 @@ export const Route = createFileRoute("/api/public/cashfree-webhook")({
             { onConflict: "user_id,plan_code" },
           );
         } else if (status === "FAILED" || status === "USER_DROPPED") {
-          await supabaseAdmin.from("orders").update({ status: "failed", raw: payload }).eq("id", order.id);
+          await supabaseAdmin
+            .from("orders")
+            .update({ status: "failed", raw: payload })
+            .eq("id", order.id);
         }
 
         return new Response("ok");

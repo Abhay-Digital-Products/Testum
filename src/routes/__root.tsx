@@ -4,7 +4,6 @@ import "@fontsource/poppins/600.css";
 import "@fontsource/poppins/700.css";
 import "@fontsource/poppins/800.css";
 
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -19,6 +18,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Analytics } from "@vercel/analytics/react";
 
 function NotFoundComponent() {
   return (
@@ -52,10 +52,17 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <p className="mt-2 text-sm text-muted-foreground">Try again or head home.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
-            onClick={() => { router.invalidate(); reset(); }}
+            onClick={() => {
+              router.invalidate();
+              reset();
+            }}
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-          >Try again</button>
-          <a href="/" className="rounded-md border px-4 py-2 text-sm font-medium">Go home</a>
+          >
+            Try again
+          </button>
+          <a href="/" className="rounded-md border px-4 py-2 text-sm font-medium">
+            Go home
+          </a>
         </div>
       </div>
     </div>
@@ -66,9 +73,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" },
+      {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover",
+      },
       { title: "Testum  -  NEET 2027 CBT Test Series & AI Analysis" },
-      { name: "description", content: "Practice NEET 2027 with 340+ chapter-wise, part & full syllabus CBT tests. Real NTA-style exam environment with AI-powered weak point analysis." },
+      {
+        name: "description",
+        content:
+          "Practice NEET 2027 with 340+ chapter-wise, part & full syllabus CBT tests. Real NTA-style exam environment with AI-powered weak point analysis.",
+      },
       { name: "author", content: "Testum" },
       { name: "theme-color", content: "#4b3fc9" },
       { name: "mobile-web-app-capable", content: "yes" },
@@ -76,7 +90,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "apple-mobile-web-app-status-bar-style", content: "default" },
       { name: "apple-mobile-web-app-title", content: "Testum" },
       { property: "og:title", content: "Testum  -  NEET 2027 CBT Test Series" },
-      { property: "og:description", content: "Real NTA-style CBT tests with AI weak-point analysis for NEET 2027 aspirants." },
+      {
+        property: "og:description",
+        content: "Real NTA-style CBT tests with AI weak-point analysis for NEET 2027 aspirants.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -96,8 +113,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <head><HeadContent /></head>
-      <body>{children}<Scripts /></body>
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        {children}
+        <Analytics />
+        <Scripts />
+      </body>
     </html>
   );
 }

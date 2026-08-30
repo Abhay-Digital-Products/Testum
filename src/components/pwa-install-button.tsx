@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { Smartphone, Download, Share, PlusSquare, CheckCircle2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -23,7 +29,8 @@ export function PWAInstallModal({
           </div>
           <DialogTitle className="font-display text-2xl font-bold">Install Testum App</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Get instant full-screen access, faster load times, and practice NEET tests without browser address bars!
+            Get instant full-screen access, faster load times, and practice NEET tests without
+            browser address bars!
           </DialogDescription>
         </DialogHeader>
 
@@ -34,7 +41,11 @@ export function PWAInstallModal({
                 1
               </div>
               <div className="text-xs text-slate-700 dark:text-slate-300">
-                Tap the <span className="inline-flex items-center font-semibold text-primary"><Share className="inline h-3.5 w-3.5 mx-1" /> Share</span> button in Safari's bottom toolbar.
+                Tap the{" "}
+                <span className="inline-flex items-center font-semibold text-primary">
+                  <Share className="inline h-3.5 w-3.5 mx-1" /> Share
+                </span>{" "}
+                button in Safari's bottom toolbar.
               </div>
             </div>
 
@@ -43,7 +54,11 @@ export function PWAInstallModal({
                 2
               </div>
               <div className="text-xs text-slate-700 dark:text-slate-300">
-                Scroll down and tap <span className="inline-flex items-center font-semibold text-primary"><PlusSquare className="inline h-3.5 w-3.5 mx-1" /> Add to Home Screen</span>.
+                Scroll down and tap{" "}
+                <span className="inline-flex items-center font-semibold text-primary">
+                  <PlusSquare className="inline h-3.5 w-3.5 mx-1" /> Add to Home Screen
+                </span>
+                .
               </div>
             </div>
 
@@ -52,7 +67,8 @@ export function PWAInstallModal({
                 3
               </div>
               <div className="text-xs text-slate-700 dark:text-slate-300">
-                Tap <span className="font-semibold text-primary">Add</span> in the top right corner to install.
+                Tap <span className="font-semibold text-primary">Add</span> in the top right corner
+                to install.
               </div>
             </div>
           </div>
@@ -60,14 +76,19 @@ export function PWAInstallModal({
           <div className="mt-4 space-y-3">
             <div className="rounded-2xl border bg-slate-50 p-4 dark:bg-slate-900/50 text-center space-y-2">
               <p className="text-xs text-slate-600 dark:text-slate-400">
-                Tap the browser menu <span className="font-bold">(⋮)</span> at the top right and select <span className="font-semibold text-primary">"Install app"</span> or <span className="font-semibold text-primary">"Add to Home screen"</span>.
+                Tap the browser menu <span className="font-bold">(⋮)</span> at the top right and
+                select <span className="font-semibold text-primary">"Install app"</span> or{" "}
+                <span className="font-semibold text-primary">"Add to Home screen"</span>.
               </p>
             </div>
           </div>
         )}
 
         <div className="mt-5 flex justify-center">
-          <Button onClick={() => onOpenChange(false)} className="w-full h-11 rounded-xl font-semibold">
+          <Button
+            onClick={() => onOpenChange(false)}
+            className="w-full h-11 rounded-xl font-semibold"
+          >
             Got it, thanks!
           </Button>
         </div>
@@ -103,7 +124,7 @@ export function PWAInstallButton({
           onClick={installApp}
           className={cn(
             "group relative inline-flex items-center justify-center gap-2.5 h-12 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-primary px-6 font-semibold text-white shadow-lg shadow-emerald-600/20 transition-all hover:scale-[1.02] hover:shadow-emerald-600/30 active:scale-[0.98]",
-            className
+            className,
           )}
         >
           <div className="absolute -top-2.5 -right-2 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-extrabold text-amber-950 uppercase tracking-wider shadow-sm animate-pulse">
@@ -125,11 +146,7 @@ export function PWAInstallButton({
         variant={variant}
         size={size}
         onClick={installApp}
-        className={cn(
-          "relative gap-1.5 transition-all",
-          showBadge && "pr-3",
-          className
-        )}
+        className={cn("relative gap-1.5 transition-all", showBadge && "pr-3", className)}
       >
         <Smartphone className="h-4 w-4" />
         {children || <span>Install App</span>}
@@ -162,14 +179,20 @@ export function PWAFloatingBanner() {
             <div>
               <div className="text-xs font-bold text-foreground flex items-center gap-1.5">
                 Install Testum App
-                <span className="rounded bg-primary/10 px-1.5 py-0.2 text-[9px] font-bold text-primary">Fast</span>
+                <span className="rounded bg-primary/10 px-1.5 py-0.2 text-[9px] font-bold text-primary">
+                  Fast
+                </span>
               </div>
               <div className="text-[11px] text-muted-foreground">Practice exams in full screen</div>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            <Button size="sm" onClick={installApp} className="h-8 rounded-lg text-xs font-semibold px-3 shadow-sm">
+            <Button
+              size="sm"
+              onClick={installApp}
+              className="h-8 rounded-lg text-xs font-semibold px-3 shadow-sm"
+            >
               Install
             </Button>
             <button

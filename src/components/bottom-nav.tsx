@@ -30,10 +30,12 @@ export function BottomNav() {
                   active ? "text-primary" : "text-muted-foreground",
                 )}
               >
-                <span className={cn(
-                  "grid h-9 w-9 place-items-center rounded-xl transition-all",
-                  active && "bg-primary text-primary-foreground shadow-elegant"
-                )}>
+                <span
+                  className={cn(
+                    "grid h-9 w-9 place-items-center rounded-xl transition-all",
+                    active && "bg-primary text-primary-foreground shadow-elegant",
+                  )}
+                >
                   <Icon className="h-4.5 w-4.5" size={18} />
                 </span>
                 {it.label}

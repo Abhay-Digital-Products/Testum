@@ -4,20 +4,39 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { createCheckout } from "@/lib/payments.functions";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Layers, Trophy, Crown, Check, Loader2, ShieldCheck, Zap, Star } from "lucide-react";
+import {
+  BookOpen,
+  Layers,
+  Trophy,
+  Crown,
+  Check,
+  Loader2,
+  ShieldCheck,
+  Zap,
+  Star,
+} from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/app/pricing")({
   head: () => ({
     meta: [
       { title: "Unlock Test Series - Testum" },
-      { name: "description", content: "Unlock Testum NEET 2027 CBT test series. Chapter, part, full syllabus or the combo pack." },
+      {
+        name: "description",
+        content:
+          "Unlock Testum NEET 2027 CBT test series. Chapter, part, full syllabus or the combo pack.",
+      },
     ],
   }),
   component: Pricing,
 });
 
-const ICONS: Record<string, typeof BookOpen> = { chapter: BookOpen, part: Layers, full: Trophy, combo: Crown };
+const ICONS: Record<string, typeof BookOpen> = {
+  chapter: BookOpen,
+  part: Layers,
+  full: Trophy,
+  combo: Crown,
+};
 
 function loadCashfree(env: "production" | "sandbox"): Promise<any> {
   return new Promise((resolve, reject) => {
@@ -43,7 +62,11 @@ function Pricing() {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const { data } = await supabase.from("plans").select("*").eq("is_active", true).order("sort_order");
+      const { data } = await supabase
+        .from("plans")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order");
       setPlans(data ?? []);
       const { data: u } = await supabase.auth.getUser();
       if (u.user) {
@@ -112,8 +135,8 @@ function Pricing() {
                   isCombo
                     ? "border-primary shadow-md ring-2 ring-primary/20"
                     : unlocked
-                    ? "border-success/30 bg-success/5"
-                    : "hover:border-primary/30"
+                      ? "border-success/30 bg-success/5"
+                      : "hover:border-primary/30"
                 }`}
               >
                 {isCombo && (
@@ -125,18 +148,24 @@ function Pricing() {
                 )}
 
                 <div className="flex items-start justify-between gap-3">
-                  <div className={`grid h-12 w-12 place-items-center rounded-xl ${isCombo ? "bg-primary/10 text-primary" : "bg-secondary text-foreground"}`}>
+                  <div
+                    className={`grid h-12 w-12 place-items-center rounded-xl ${isCombo ? "bg-primary/10 text-primary" : "bg-secondary text-foreground"}`}
+                  >
                     <Icon className="h-6 w-6" />
                   </div>
                   <div className="text-right">
-                    <div className="font-display text-2xl font-extrabold text-foreground">₹{Number(p.price_inr)}</div>
+                    <div className="font-display text-2xl font-extrabold text-foreground">
+                      ₹{Number(p.price_inr)}
+                    </div>
                     <div className="text-[11px] text-muted-foreground">one-time</div>
                   </div>
                 </div>
 
                 <div className="mt-3 flex-1">
                   <h2 className="font-display text-base font-bold text-foreground">{p.title}</h2>
-                  {p.description && <p className="mt-1 text-sm text-muted-foreground">{p.description}</p>}
+                  {p.description && (
+                    <p className="mt-1 text-sm text-muted-foreground">{p.description}</p>
+                  )}
                 </div>
 
                 <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -157,7 +186,10 @@ function Pricing() {
                       onClick={() => buy(p.code)}
                     >
                       {isLoading ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Opening payment...</>
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Opening payment...
+                        </>
                       ) : (
                         `Pay ₹${Number(p.price_inr)} securely`
                       )}
@@ -176,7 +208,10 @@ function Pricing() {
           { icon: Zap, text: "Instant access after payment" },
           { icon: Check, text: "1-year validity guaranteed" },
         ].map(({ icon: Icon, text }) => (
-          <div key={text} className="flex items-center gap-2.5 rounded-xl border bg-card/60 px-4 py-3 text-xs font-medium text-muted-foreground">
+          <div
+            key={text}
+            className="flex items-center gap-2.5 rounded-xl border bg-card/60 px-4 py-3 text-xs font-medium text-muted-foreground"
+          >
             <Icon className="h-4 w-4 shrink-0 text-success" />
             {text}
           </div>

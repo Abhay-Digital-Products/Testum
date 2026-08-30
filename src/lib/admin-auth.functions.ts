@@ -24,8 +24,14 @@ export const adminLogin = createServerFn({ method: "POST" })
     const expectedId = process.env["ADMIN_LOGIN_ID"] ?? "AbhayTestum";
     const expectedPassword = process.env["ADMIN_LOGIN_PASSWORD"] ?? "Abhay#31";
     const email = process.env["ADMIN_LOGIN_EMAIL"] ?? `${expectedId.toLowerCase()}@testum.in`;
-    if (!process.env["ADMIN_LOGIN_ID"] || !process.env["ADMIN_LOGIN_PASSWORD"] || !process.env["ADMIN_LOGIN_EMAIL"]) {
-      console.warn("[admin-login] ADMIN_LOGIN_* env vars not set  -  using default admin credentials.");
+    if (
+      !process.env["ADMIN_LOGIN_ID"] ||
+      !process.env["ADMIN_LOGIN_PASSWORD"] ||
+      !process.env["ADMIN_LOGIN_EMAIL"]
+    ) {
+      console.warn(
+        "[admin-login] ADMIN_LOGIN_* env vars not set  -  using default admin credentials.",
+      );
     }
 
     if (!safeEqual(data.id.trim(), expectedId) || !safeEqual(data.password, expectedPassword)) {
@@ -44,10 +50,16 @@ export const adminLogin = createServerFn({ method: "POST" })
 
     // Find or create the backing auth user.
     let userId: string | null = null;
-    const { data: list, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
+    const { data: list, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+      page: 1,
+      perPage: 200,
+    });
     if (listError) {
       console.error("[admin-login] listUsers failed:", listError);
-      return { ok: false as const, message: "Unable to verify admin user. Please try again later." };
+      return {
+        ok: false as const,
+        message: "Unable to verify admin user. Please try again later.",
+      };
     }
 
     const existing = list?.users?.find((u) => u.email?.toLowerCase() === email.toLowerCase());
@@ -59,7 +71,10 @@ export const adminLogin = createServerFn({ method: "POST" })
       });
       if (updateError) {
         console.error("[admin-login] updateUserById failed:", updateError);
-        return { ok: false as const, message: "Unable to update admin credentials. Please try again later." };
+        return {
+          ok: false as const,
+          message: "Unable to update admin credentials. Please try again later.",
+        };
       }
     } else {
       const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
@@ -75,7 +90,11 @@ export const adminLogin = createServerFn({ method: "POST" })
       userId = created.user.id;
     }
 
-    await supabaseAdmin.from("profiles").upsert({ id: userId, user_id: userId, full_name: "Testum Admin", email } as any, { onConflict: "user_id" });
+    await supabaseAdmin
+      .from("profiles")
+      .upsert({ id: userId, user_id: userId, full_name: "Testum Admin", email } as any, {
+        onConflict: "user_id",
+      });
 
     const { data: role, error: roleError } = await supabaseAdmin
       .from("user_roles")
@@ -87,7 +106,9 @@ export const adminLogin = createServerFn({ method: "POST" })
       console.error("[admin-login] role lookup failed:", roleError);
     }
     if (!role) {
-      const { error: insertRoleError } = await supabaseAdmin.from("user_roles").insert({ user_id: userId, role: "admin" });
+      const { error: insertRoleError } = await supabaseAdmin
+        .from("user_roles")
+        .insert({ user_id: userId, role: "admin" });
       if (insertRoleError) {
         console.error("[admin-login] insert role failed:", insertRoleError);
       }

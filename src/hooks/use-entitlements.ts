@@ -12,7 +12,10 @@ export function useEntitlements() {
     let alive = true;
     (async () => {
       const { data: u } = await supabase.auth.getUser();
-      if (!u.user) { if (alive) setLoading(false); return; }
+      if (!u.user) {
+        if (alive) setLoading(false);
+        return;
+      }
       const [{ data: ents }, { data: roles }] = await Promise.all([
         supabase.from("entitlements").select("plan_code, expires_at").eq("user_id", u.user.id),
         supabase.from("user_roles").select("role").eq("user_id", u.user.id),
@@ -29,11 +32,18 @@ export function useEntitlements() {
       setIsAdmin(!!roles?.some((r: any) => r.role === "admin"));
       setLoading(false);
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const hasAccess = (plan?: PlanCode | "free" | null, isFree?: boolean) =>
-    isAdmin || !plan || plan === "free" || isFree || plans.has("combo") || (!!plan && plans.has(plan as PlanCode));
+    isAdmin ||
+    !plan ||
+    plan === "free" ||
+    isFree ||
+    plans.has("combo") ||
+    (!!plan && plans.has(plan as PlanCode));
 
   return { plans, isAdmin, loading, hasAccess };
 }

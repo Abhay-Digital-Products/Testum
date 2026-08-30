@@ -57,7 +57,10 @@ function AdminLoginPage() {
         // Ignore sign-out failures, we just want a clean auth state.
       }
 
-      const { error } = await supabase.auth.signInWithPassword({ email: res.email.trim(), password });
+      const { error } = await supabase.auth.signInWithPassword({
+        email: res.email.trim(),
+        password,
+      });
       if (error) {
         setServerError(error.message);
         toast.error(error.message);
@@ -80,7 +83,9 @@ function AdminLoginPage() {
       <div className="absolute inset-0 bg-grid opacity-40" />
       <div className="absolute -top-24 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-primary/20 blur-3xl" />
       <div className="relative w-full max-w-sm rounded-3xl border bg-card p-8 shadow-elegant">
-        <div className="flex justify-center"><Logo /></div>
+        <div className="flex justify-center">
+          <Logo />
+        </div>
         <div className="mt-6 flex items-center justify-center gap-2 text-primary">
           <ShieldCheck className="h-5 w-5" />
           <h1 className="font-display text-xl font-bold">Admin sign in</h1>
@@ -127,7 +132,9 @@ function AdminLoginPage() {
           </Button>
         </form>
         <div className="mt-4 text-center">
-          <Button asChild variant="ghost" size="sm"><Link to="/">Back to homepage</Link></Button>
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/">Back to homepage</Link>
+          </Button>
         </div>
       </div>
     </div>

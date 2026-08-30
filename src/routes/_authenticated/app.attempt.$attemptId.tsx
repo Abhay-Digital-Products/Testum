@@ -66,12 +66,7 @@ type Q = {
   correct_option: string;
 };
 
-type AnswerStatus =
-  | "not_visited"
-  | "not_answered"
-  | "answered"
-  | "marked"
-  | "answered_marked";
+type AnswerStatus = "not_visited" | "not_answered" | "answered" | "marked" | "answered_marked";
 
 type A = {
   question_id: string;
@@ -90,7 +85,7 @@ function Player() {
   const [test, setTest] = useState<any>(null);
   const [questions, setQuestions] = useState<Q[]>([]);
   const [answers, setAnswers] = useState<Record<string, A>>({});
-  
+
   // Current active global question index (0 to questions.length - 1)
   const [currentGlobalIdx, setCurrentGlobalIdx] = useState<number>(() => {
     try {
@@ -157,7 +152,9 @@ function Player() {
 
         const { data: att, error: attErr } = await supabase
           .from("attempts")
-          .select("id, test_id, started_at, status, tests(id, title, duration_minutes, total_questions, marks_correct, marks_wrong)")
+          .select(
+            "id, test_id, started_at, status, tests(id, title, duration_minutes, total_questions, marks_correct, marks_wrong)",
+          )
           .eq("id", attemptId)
           .maybeSingle();
 
@@ -179,7 +176,9 @@ function Player() {
         const [{ data: qs }, { data: ans }] = await Promise.all([
           supabase
             .from("questions")
-            .select("id, order_index, subject, chapter, question_image_url, question_text, option_type, options, correct_option")
+            .select(
+              "id, order_index, subject, chapter, question_image_url, question_text, option_type, options, correct_option",
+            )
             .eq("test_id", att.test_id)
             .order("order_index"),
           supabase
@@ -191,7 +190,11 @@ function Player() {
         const qList: Q[] = ((qs as any) ?? []).map((q: any) => ({
           ...q,
           options: normalizeQuestionOptions(q.options),
-          correct_option: normalizeCorrectOption(q.correct_option) ?? String(q.correct_option || "").trim().toUpperCase(),
+          correct_option:
+            normalizeCorrectOption(q.correct_option) ??
+            String(q.correct_option || "")
+              .trim()
+              .toUpperCase(),
         }));
         if (isMounted) setQuestions(qList);
 
@@ -274,7 +277,7 @@ function Player() {
                     time_spent_seconds: 0,
                     updated_at: new Date().toISOString(),
                   },
-                  { onConflict: "attempt_id,question_id" }
+                  { onConflict: "attempt_id,question_id" },
                 )
                 .then(() => {});
             }
@@ -298,10 +301,7 @@ function Player() {
   // Persist current question index
   useEffect(() => {
     try {
-      sessionStorage.setItem(
-        `testum_attempt_${attemptId}_idx`,
-        currentGlobalIdx.toString()
-      );
+      sessionStorage.setItem(`testum_attempt_${attemptId}_idx`, currentGlobalIdx.toString());
     } catch {}
   }, [attemptId, currentGlobalIdx]);
 
@@ -330,19 +330,22 @@ function Player() {
 
   // Background session keep-alive
   useEffect(() => {
-    const keepAliveInterval = setInterval(async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (data?.session) {
-          const expiresAt = data.session.expires_at ? data.session.expires_at * 1000 : 0;
-          if (!expiresAt || expiresAt < Date.now() + 1000 * 60 * 20) {
-            await supabase.auth.refreshSession();
+    const keepAliveInterval = setInterval(
+      async () => {
+        try {
+          const { data } = await supabase.auth.getSession();
+          if (data?.session) {
+            const expiresAt = data.session.expires_at ? data.session.expires_at * 1000 : 0;
+            if (!expiresAt || expiresAt < Date.now() + 1000 * 60 * 20) {
+              await supabase.auth.refreshSession();
+            }
           }
+        } catch (err) {
+          console.warn("[session-keepalive] Silent refresh error:", err);
         }
-      } catch (err) {
-        console.warn("[session-keepalive] Silent refresh error:", err);
-      }
-    }, 1000 * 60 * 5);
+      },
+      1000 * 60 * 5,
+    );
 
     return () => clearInterval(keepAliveInterval);
   }, []);
@@ -372,10 +375,7 @@ function Player() {
 
       // 2. Synchronously write to local cache
       try {
-        sessionStorage.setItem(
-          `testum_attempt_${attemptId}_answers`,
-          JSON.stringify(nextMap)
-        );
+        sessionStorage.setItem(`testum_attempt_${attemptId}_answers`, JSON.stringify(nextMap));
       } catch {}
 
       // 3. Update React UI state
@@ -395,7 +395,7 @@ function Player() {
               time_spent_seconds: nextA.time_spent_seconds,
               updated_at: new Date().toISOString(),
             },
-            { onConflict: "attempt_id,question_id" }
+            { onConflict: "attempt_id,question_id" },
           )
           .then(({ error }: any) => {
             setSyncStatus("synced");
@@ -407,7 +407,7 @@ function Player() {
 
       return nextMap;
     },
-    [attemptId]
+    [attemptId],
   );
 
   // Time spent tracker on current question
@@ -421,7 +421,7 @@ function Player() {
         {
           time_spent_seconds: (a?.time_spent_seconds ?? 0) + delta,
         },
-        false
+        false,
       );
     }
     questionStart.current = Date.now();
@@ -443,14 +443,11 @@ function Player() {
 
       setCurrentGlobalIdx(targetIdx);
       try {
-        sessionStorage.setItem(
-          `testum_attempt_${attemptId}_idx`,
-          targetIdx.toString()
-        );
+        sessionStorage.setItem(`testum_attempt_${attemptId}_idx`, targetIdx.toString());
       } catch {}
       questionStart.current = Date.now();
     },
-    [questions, recordCurrentTime, updateAnswer, attemptId]
+    [questions, recordCurrentTime, updateAnswer, attemptId],
   );
 
   // Option selection
@@ -462,9 +459,7 @@ function Player() {
 
       const a = answersRef.current[currentQuestion.id];
       const nextStatus: AnswerStatus =
-        a?.status === "marked" || a?.status === "answered_marked"
-          ? "answered_marked"
-          : "answered";
+        a?.status === "marked" || a?.status === "answered_marked" ? "answered_marked" : "answered";
 
       updateAnswer(
         currentQuestion.id,
@@ -472,10 +467,10 @@ function Player() {
           selected_option: normalizedKey,
           status: nextStatus,
         },
-        true
+        true,
       );
     },
-    [currentQuestion, updateAnswer]
+    [currentQuestion, updateAnswer],
   );
 
   // Clear current question response
@@ -483,9 +478,7 @@ function Player() {
     if (!currentQuestion) return;
     const a = answersRef.current[currentQuestion.id];
     const nextStatus: AnswerStatus =
-      a?.status === "answered_marked" || a?.status === "marked"
-        ? "marked"
-        : "not_answered";
+      a?.status === "answered_marked" || a?.status === "marked" ? "marked" : "not_answered";
 
     updateAnswer(
       currentQuestion.id,
@@ -493,7 +486,7 @@ function Player() {
         selected_option: null,
         status: nextStatus,
       },
-      true
+      true,
     );
     toast.info("Response cleared");
   }, [currentQuestion, updateAnswer]);
@@ -510,7 +503,7 @@ function Player() {
         {
           status: a.status === "answered_marked" ? "answered_marked" : "answered",
         },
-        true
+        true,
       );
     } else {
       updateAnswer(
@@ -518,7 +511,7 @@ function Player() {
         {
           status: a?.status === "marked" ? "marked" : "not_answered",
         },
-        true
+        true,
       );
     }
 
@@ -527,7 +520,14 @@ function Player() {
     } else {
       toast.success("Reached the last question. You can review or submit.");
     }
-  }, [currentQuestion, recordCurrentTime, currentGlobalIdx, questions.length, goToQuestion, updateAnswer]);
+  }, [
+    currentQuestion,
+    recordCurrentTime,
+    currentGlobalIdx,
+    questions.length,
+    goToQuestion,
+    updateAnswer,
+  ]);
 
   // Mark for Review & Next
   const markForReviewAndNext = useCallback(() => {
@@ -540,7 +540,7 @@ function Player() {
       {
         status: a?.selected_option ? "answered_marked" : "marked",
       },
-      true
+      true,
     );
 
     if (currentGlobalIdx < questions.length - 1) {
@@ -548,7 +548,14 @@ function Player() {
     } else {
       toast.info("Marked for review (last question).");
     }
-  }, [currentQuestion, recordCurrentTime, currentGlobalIdx, questions.length, goToQuestion, updateAnswer]);
+  }, [
+    currentQuestion,
+    recordCurrentTime,
+    currentGlobalIdx,
+    questions.length,
+    goToQuestion,
+    updateAnswer,
+  ]);
 
   // Go to Previous question
   const goPrevious = useCallback(() => {
@@ -601,8 +608,12 @@ function Player() {
           question_id: q.id,
           selected_option: selected,
           status: hasSelected
-            ? (a?.status === "answered_marked" ? "answered_marked" : "answered")
-            : (a?.status === "marked" ? "marked" : "not_answered"),
+            ? a?.status === "answered_marked"
+              ? "answered_marked"
+              : "answered"
+            : a?.status === "marked"
+              ? "marked"
+              : "not_answered",
           time_spent_seconds: a?.time_spent_seconds ?? 0,
           is_correct,
           updated_at: new Date().toISOString(),
@@ -672,12 +683,14 @@ function Player() {
         navigate({ to: "/app/result/$attemptId", params: { attemptId } });
       } catch (err: any) {
         console.error("Failed to submit test:", err);
-        toast.error("Failed to submit test: " + (err?.message || "Network error. Please try again."));
+        toast.error(
+          "Failed to submit test: " + (err?.message || "Network error. Please try again."),
+        );
         submittingRef.current = false;
         setSubmitting(false);
       }
     },
-    [recordCurrentTime, questions, attemptId, test, navigate]
+    [recordCurrentTime, questions, attemptId, test, navigate],
   );
 
   // Keyboard Shortcuts (1-4, A-D, Enter, M, X, ArrowLeft/Right)
@@ -706,7 +719,17 @@ function Player() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [loading, submitting, sheetOpen, paperModalOpen, selectOption, saveAndNext, goPrevious, markForReviewAndNext, clearResponse]);
+  }, [
+    loading,
+    submitting,
+    sheetOpen,
+    paperModalOpen,
+    selectOption,
+    saveAndNext,
+    goPrevious,
+    markForReviewAndNext,
+    clearResponse,
+  ]);
 
   // Compute summary stats
   const summary = useMemo(() => {
@@ -730,7 +753,10 @@ function Player() {
 
   // Subject-wise summary statistics
   const subjectSummary = useMemo(() => {
-    const map: Record<string, { total: number; answered: number; marked: number; notAnswered: number }> = {};
+    const map: Record<
+      string,
+      { total: number; answered: number; marked: number; notAnswered: number }
+    > = {};
     for (const s of subjects) {
       map[s] = { total: 0, answered: 0, marked: 0, notAnswered: 0 };
     }
@@ -755,7 +781,9 @@ function Player() {
       <div className="grid min-h-[100dvh] place-items-center bg-background text-sm text-muted-foreground">
         <div className="flex flex-col items-center gap-3">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent shadow-sm" />
-          <p className="font-display font-bold text-foreground text-base">Loading NTA CBT Engine…</p>
+          <p className="font-display font-bold text-foreground text-base">
+            Loading NTA CBT Engine…
+          </p>
           <p className="text-xs text-muted-foreground">Preparing question paper and palette...</p>
         </div>
       </div>
@@ -799,7 +827,7 @@ function Player() {
                   <span
                     className={cn(
                       "h-2 w-2 rounded-full shrink-0 transition-colors",
-                      syncStatus === "synced" ? "bg-emerald-500" : "bg-amber-500"
+                      syncStatus === "synced" ? "bg-emerald-500" : "bg-amber-500",
                     )}
                   />
                   <span className="truncate">
@@ -808,9 +836,7 @@ function Player() {
                 </div>
               </div>
               <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground truncate">
-                <span className="capitalize font-bold text-primary">
-                  {currentQuestion.subject}
-                </span>
+                <span className="capitalize font-bold text-primary">{currentQuestion.subject}</span>
                 {currentQuestion.chapter && (
                   <span className="hidden md:inline">· {currentQuestion.chapter}</span>
                 )}
@@ -829,7 +855,9 @@ function Player() {
               title="Toggle Font Size"
             >
               <Type className="h-3.5 w-3.5" />
-              <span className="text-xs font-semibold">{fontSize === "normal" ? "Font: A" : "Font: A+"}</span>
+              <span className="text-xs font-semibold">
+                {fontSize === "normal" ? "Font: A" : "Font: A+"}
+              </span>
             </Button>
 
             {/* Question Paper View Modal Trigger */}
@@ -942,32 +970,50 @@ function Player() {
                               <tr key={s} className="hover:bg-muted/30">
                                 <td className="p-2.5 font-bold capitalize">{s}</td>
                                 <td className="p-2.5 text-center">{stat.total}</td>
-                                <td className="p-2.5 text-center font-bold text-emerald-600">{stat.answered}</td>
-                                <td className="p-2.5 text-center font-bold text-purple-600">{stat.marked}</td>
-                                <td className="p-2.5 text-center font-bold text-rose-600">{stat.notAnswered}</td>
+                                <td className="p-2.5 text-center font-bold text-emerald-600">
+                                  {stat.answered}
+                                </td>
+                                <td className="p-2.5 text-center font-bold text-purple-600">
+                                  {stat.marked}
+                                </td>
+                                <td className="p-2.5 text-center font-bold text-rose-600">
+                                  {stat.notAnswered}
+                                </td>
                               </tr>
                             ))}
                             <tr className="bg-muted/40 font-bold border-t-2">
                               <td className="p-2.5">Overall Total</td>
                               <td className="p-2.5 text-center">{questions.length}</td>
-                              <td className="p-2.5 text-center text-emerald-600">{summary.answered + summary.answeredMarked}</td>
-                              <td className="p-2.5 text-center text-purple-600">{summary.marked}</td>
-                              <td className="p-2.5 text-center text-rose-600">{summary.notAnswered + summary.notVisited}</td>
+                              <td className="p-2.5 text-center text-emerald-600">
+                                {summary.answered + summary.answeredMarked}
+                              </td>
+                              <td className="p-2.5 text-center text-purple-600">
+                                {summary.marked}
+                              </td>
+                              <td className="p-2.5 text-center text-rose-600">
+                                {summary.notAnswered + summary.notVisited}
+                              </td>
                             </tr>
                           </tbody>
                         </table>
                       </div>
 
-                      {(summary.notAnswered + summary.notVisited > 0) && (
+                      {summary.notAnswered + summary.notVisited > 0 && (
                         <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-2.5 text-xs text-amber-700 dark:text-amber-300">
-                          ⚠️ You have <strong>{summary.notAnswered + summary.notVisited} unanswered questions</strong>. Once submitted, answers cannot be edited.
+                          ⚠️ You have{" "}
+                          <strong>
+                            {summary.notAnswered + summary.notVisited} unanswered questions
+                          </strong>
+                          . Once submitted, answers cannot be edited.
                         </div>
                       )}
                     </div>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="gap-2 sm:gap-0 pt-2">
-                  <AlertDialogCancel className="rounded-xl font-semibold cursor-pointer">Back to Exam</AlertDialogCancel>
+                  <AlertDialogCancel className="rounded-xl font-semibold cursor-pointer">
+                    Back to Exam
+                  </AlertDialogCancel>
                   <AlertDialogAction
                     onClick={() => submitTest(false)}
                     className="rounded-xl bg-destructive hover:bg-destructive/90 font-bold cursor-pointer"
@@ -992,7 +1038,7 @@ function Player() {
                 "rounded-xl px-3 py-1 text-xs font-bold transition-colors shrink-0 cursor-pointer",
                 selectedSubject === "all"
                   ? "bg-primary text-primary-foreground shadow-xs"
-                  : "bg-secondary text-muted-foreground hover:text-foreground"
+                  : "bg-secondary text-muted-foreground hover:text-foreground",
               )}
             >
               All Sections ({questions.length})
@@ -1015,8 +1061,8 @@ function Player() {
                     selectedSubject === s
                       ? "bg-primary text-primary-foreground shadow-xs"
                       : isCurrentQSubject
-                      ? "bg-primary/10 text-primary border border-primary/30"
-                      : "bg-secondary text-muted-foreground hover:text-foreground"
+                        ? "bg-primary/10 text-primary border border-primary/30"
+                        : "bg-secondary text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <span>{s}</span>
@@ -1144,12 +1190,7 @@ function Player() {
             <div className="mt-3 flex items-center justify-between pt-2 border-t text-xs">
               <span className="text-muted-foreground font-medium">Question Image Preview</span>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  asChild
-                  className="h-8 rounded-xl text-xs"
-                >
+                <Button variant="outline" size="sm" asChild className="h-8 rounded-xl text-xs">
                   <a href={zoomImage} target="_blank" rel="noopener noreferrer">
                     Open in New Tab
                   </a>
@@ -1187,8 +1228,8 @@ const ExamTimer = memo(function ExamTimer({ remaining }: { remaining: number }) 
         isTimeCritical
           ? "bg-rose-600 text-white animate-pulse"
           : remaining < 900
-          ? "bg-amber-500 text-white"
-          : "bg-slate-900 text-white dark:bg-slate-800"
+            ? "bg-amber-500 text-white"
+            : "bg-slate-900 text-white dark:bg-slate-800",
       )}
     >
       <Clock className="h-3.5 w-3.5" />
@@ -1250,7 +1291,9 @@ const QuestionWorkspace = memo(function QuestionWorkspace({
           <span className="text-emerald-600 font-bold">+{test?.marks_correct ?? 4}</span>
           <span className="text-muted-foreground/40">/</span>
           <span className="text-rose-600 font-bold">{test?.marks_wrong ?? -1}</span>
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium ml-0.5">Marks</span>
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium ml-0.5">
+            Marks
+          </span>
         </div>
       </div>
 
@@ -1271,7 +1314,7 @@ const QuestionWorkspace = memo(function QuestionWorkspace({
         <div
           className={cn(
             "mb-5 font-medium leading-relaxed text-foreground whitespace-pre-wrap select-text",
-            fontSize === "large" ? "text-base sm:text-lg" : "text-sm sm:text-base"
+            fontSize === "large" ? "text-base sm:text-lg" : "text-sm sm:text-base",
           )}
         >
           {currentQuestion.question_text}
@@ -1291,7 +1334,7 @@ const QuestionWorkspace = memo(function QuestionWorkspace({
                 "group flex items-start gap-3 rounded-2xl border p-3.5 sm:p-4 text-left transition-colors duration-100 touch-manipulation cursor-pointer text-foreground",
                 isSelected
                   ? "border-primary bg-primary/10 shadow-xs ring-2 ring-primary/80 ring-offset-1 dark:ring-offset-card"
-                  : "border-border bg-card hover:border-primary/50 hover:bg-secondary/40"
+                  : "border-border bg-card hover:border-primary/50 hover:bg-secondary/40",
               )}
             >
               <span
@@ -1299,7 +1342,7 @@ const QuestionWorkspace = memo(function QuestionWorkspace({
                   "grid h-8 w-8 shrink-0 place-items-center rounded-xl font-display text-sm font-bold transition-colors",
                   isSelected
                     ? "bg-primary text-primary-foreground shadow-xs ring-2 ring-primary/30"
-                    : "bg-secondary text-foreground group-hover:bg-primary/20 group-hover:text-primary"
+                    : "bg-secondary text-foreground group-hover:bg-primary/20 group-hover:text-primary",
                 )}
               >
                 {op.key}
@@ -1307,7 +1350,7 @@ const QuestionWorkspace = memo(function QuestionWorkspace({
               <div
                 className={cn(
                   "min-w-0 flex-1 pt-0.5 leading-relaxed font-medium",
-                  fontSize === "large" ? "text-sm sm:text-base" : "text-xs sm:text-sm"
+                  fontSize === "large" ? "text-sm sm:text-base" : "text-xs sm:text-sm",
                 )}
               >
                 {op.image_url && (
@@ -1333,14 +1376,20 @@ const QuestionWorkspace = memo(function QuestionWorkspace({
           <div>
             {currentAnswer?.selected_option ? (
               <span>
-                Selected Choice: <strong className="text-primary font-bold">Option ({currentAnswer.selected_option})</strong>
+                Selected Choice:{" "}
+                <strong className="text-primary font-bold">
+                  Option ({currentAnswer.selected_option})
+                </strong>
               </span>
             ) : (
               <span className="italic text-muted-foreground/80">No option chosen</span>
             )}
           </div>
           <div className="text-[11px] font-medium hidden md:block text-muted-foreground">
-            Keys: <kbd className="px-1.5 py-0.5 rounded bg-muted border font-mono">1-4</kbd> / <kbd className="px-1.5 py-0.5 rounded bg-muted border font-mono">A-D</kbd> · <kbd className="px-1.5 py-0.5 rounded bg-muted border font-mono">Enter</kbd> Save · <kbd className="px-1.5 py-0.5 rounded bg-muted border font-mono">M</kbd> Review
+            Keys: <kbd className="px-1.5 py-0.5 rounded bg-muted border font-mono">1-4</kbd> /{" "}
+            <kbd className="px-1.5 py-0.5 rounded bg-muted border font-mono">A-D</kbd> ·{" "}
+            <kbd className="px-1.5 py-0.5 rounded bg-muted border font-mono">Enter</kbd> Save ·{" "}
+            <kbd className="px-1.5 py-0.5 rounded bg-muted border font-mono">M</kbd> Review
           </div>
         </div>
 
@@ -1493,13 +1542,15 @@ const QuestionPalette = memo(function QuestionPalette({
             onClick={() => setPaletteFilter(paletteFilter === item.filter ? "all" : item.filter)}
             className={cn(
               "flex items-center gap-2 p-1 rounded-lg text-left transition-colors duration-100 cursor-pointer",
-              paletteFilter === item.filter ? "bg-primary/10 ring-1 ring-primary/40" : "hover:bg-muted/40"
+              paletteFilter === item.filter
+                ? "bg-primary/10 ring-1 ring-primary/40"
+                : "hover:bg-muted/40",
             )}
           >
             <span
               className={cn(
                 "grid h-6 w-6 shrink-0 place-items-center rounded-lg text-[11px] shadow-2xs",
-                item.cls
+                item.cls,
               )}
             >
               {item.count}
@@ -1527,7 +1578,8 @@ const QuestionPalette = memo(function QuestionPalette({
             const status: AnswerStatus = a?.status ?? "not_visited";
             const isCurrent = globalIdx === currentGlobalIdx;
 
-            let statusColor = "bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200";
+            let statusColor =
+              "bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200";
             if (status === "answered") {
               statusColor = "bg-emerald-600 text-white font-bold shadow-xs hover:bg-emerald-700";
             } else if (status === "not_answered") {
@@ -1535,7 +1587,8 @@ const QuestionPalette = memo(function QuestionPalette({
             } else if (status === "marked") {
               statusColor = "bg-purple-600 text-white font-bold shadow-xs hover:bg-purple-700";
             } else if (status === "answered_marked") {
-              statusColor = "bg-purple-600 text-white font-bold shadow-xs relative hover:bg-purple-700 after:content-[''] after:absolute after:bottom-0.5 after:right-0.5 after:h-2 after:w-2 after:rounded-full after:bg-emerald-400";
+              statusColor =
+                "bg-purple-600 text-white font-bold shadow-xs relative hover:bg-purple-700 after:content-[''] after:absolute after:bottom-0.5 after:right-0.5 after:h-2 after:w-2 after:rounded-full after:bg-emerald-400";
             }
 
             return (
@@ -1547,7 +1600,7 @@ const QuestionPalette = memo(function QuestionPalette({
                   "aspect-square rounded-xl text-xs font-bold transition-colors duration-100 flex items-center justify-center cursor-pointer touch-manipulation",
                   statusColor,
                   isCurrent &&
-                    "ring-3 ring-primary ring-offset-2 scale-105 z-10 dark:ring-offset-card"
+                    "ring-3 ring-primary ring-offset-2 scale-105 z-10 dark:ring-offset-card",
                 )}
                 title={`Q${globalIdx + 1} (${q.subject}) - ${status.replace("_", " ")}`}
               >

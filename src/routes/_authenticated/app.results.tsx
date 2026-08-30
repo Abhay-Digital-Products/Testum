@@ -17,7 +17,9 @@ function Results() {
       if (!u.user) return;
       const { data } = await supabase
         .from("attempts")
-        .select("id, score, correct_count, wrong_count, unattempted_count, submitted_at, status, time_spent_seconds, tests(title, total_questions, marks_correct)")
+        .select(
+          "id, score, correct_count, wrong_count, unattempted_count, submitted_at, status, time_spent_seconds, tests(title, total_questions, marks_correct)",
+        )
         .eq("user_id", u.user.id)
         .eq("status", "submitted")
         .order("submitted_at", { ascending: false });
@@ -95,7 +97,11 @@ function Results() {
                   <span className="text-xs font-semibold text-muted-foreground">/{total}</span>
                 </div>
                 <div className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {new Date(a.submitted_at).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                  {new Date(a.submitted_at).toLocaleDateString("en-IN", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                  })}
                 </div>
               </div>
             </Link>

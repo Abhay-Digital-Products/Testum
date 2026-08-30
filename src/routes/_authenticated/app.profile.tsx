@@ -7,28 +7,61 @@ import { createCheckout } from "@/lib/payments.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
-import { Crown, Check, BookOpen, Layers, Trophy, ShieldCheck, ArrowRight, User, Mail, Phone, GraduationCap, Zap, Loader2 } from "lucide-react";
+import {
+  Crown,
+  Check,
+  BookOpen,
+  Layers,
+  Trophy,
+  ShieldCheck,
+  ArrowRight,
+  User,
+  Mail,
+  Phone,
+  GraduationCap,
+  Zap,
+  Loader2,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/profile")({
   head: () => ({
     meta: [
       { title: "Profile & Plans  -  Testum" },
-      { name: "description", content: "Manage your Testum profile details, view your active subscription plans, and unlock test series." },
+      {
+        name: "description",
+        content:
+          "Manage your Testum profile details, view your active subscription plans, and unlock test series.",
+      },
     ],
   }),
   component: Profile,
 });
 
-const CLASS_LABEL: Record<string, string> = { "11th": "11th Class", "12th": "12th Class", dropper: "Dropper" };
+const CLASS_LABEL: Record<string, string> = {
+  "11th": "11th Class",
+  "12th": "12th Class",
+  dropper: "Dropper",
+};
 const PLAN_LABEL: Record<string, string> = {
   chapter: "Chapter-Wise Series",
   part: "Part Syllabus Series",
   full: "Full Syllabus Series",
   combo: "Combo All-Access Pack",
 };
-const ICONS: Record<string, typeof BookOpen> = { chapter: BookOpen, part: Layers, full: Trophy, combo: Crown };
+const ICONS: Record<string, typeof BookOpen> = {
+  chapter: BookOpen,
+  part: Layers,
+  full: Trophy,
+  combo: Crown,
+};
 
 interface PlanItem {
   id: string;
@@ -60,7 +93,11 @@ function Profile() {
       setEmail(u.user.email ?? "");
 
       const [{ data: p }, { data: plansData }] = await Promise.all([
-        supabase.from("profiles").select("full_name, mobile, student_class").eq("user_id", u.user.id).maybeSingle(),
+        supabase
+          .from("profiles")
+          .select("full_name, mobile, student_class")
+          .eq("user_id", u.user.id)
+          .maybeSingle(),
         supabase.from("plans").select("*").eq("is_active", true).order("sort_order"),
       ]);
 
@@ -74,7 +111,8 @@ function Profile() {
   }, []);
 
   const save = async () => {
-    if (mobile && !/^[6-9]\d{9}$/.test(mobile)) return toast.error("Enter a valid 10-digit mobile number");
+    if (mobile && !/^[6-9]\d{9}$/.test(mobile))
+      return toast.error("Enter a valid 10-digit mobile number");
     setBusy(true);
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) {
@@ -83,7 +121,11 @@ function Profile() {
     }
     const { error } = await supabase
       .from("profiles")
-      .update({ full_name: name.trim(), mobile: mobile || null, student_class: (studentClass || null) as never })
+      .update({
+        full_name: name.trim(),
+        mobile: mobile || null,
+        student_class: (studentClass || null) as never,
+      })
       .eq("user_id", u.user.id);
     setBusy(false);
     if (error) toast.error(error.message);
@@ -120,7 +162,9 @@ function Profile() {
       {/* Header */}
       <div>
         <h1 className="font-display text-2xl font-bold sm:text-3xl">Profile & Subscriptions</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Manage your account details and view or upgrade your test series plans.</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Manage your account details and view or upgrade your test series plans.
+        </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-12">
@@ -220,12 +264,15 @@ function Profile() {
                   <Zap className="h-4 w-4 text-primary" /> Full Admin Privileges Active
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  You have full unrestricted access to all test series, chapter tests, and solutions.
+                  You have full unrestricted access to all test series, chapter tests, and
+                  solutions.
                 </p>
               </div>
             ) : plans.size > 0 ? (
               <div className="space-y-3">
-                <p className="text-xs font-medium text-muted-foreground">Unlocked Series & Plans:</p>
+                <p className="text-xs font-medium text-muted-foreground">
+                  Unlocked Series & Plans:
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {Array.from(plans).map((code) => (
                     <span
@@ -240,8 +287,12 @@ function Profile() {
               </div>
             ) : (
               <div className="rounded-xl border border-dashed p-4 text-center space-y-2">
-                <p className="text-sm text-muted-foreground">You currently have no active paid plans.</p>
-                <p className="text-xs text-muted-foreground">Free practice tests are available. Unlock full series below.</p>
+                <p className="text-sm text-muted-foreground">
+                  You currently have no active paid plans.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Free practice tests are available. Unlock full series below.
+                </p>
               </div>
             )}
           </div>
@@ -250,7 +301,10 @@ function Profile() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-lg font-bold">Available Test Series Plans</h2>
-              <Link to="/app/pricing" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+              <Link
+                to="/app/pricing"
+                className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+              >
                 Full Pricing Page <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
@@ -274,7 +328,9 @@ function Profile() {
                           <Icon className="h-5 w-5" />
                         </div>
                         <div className="text-right">
-                          <div className="font-display text-xl font-extrabold text-foreground">₹{Number(p.price_inr)}</div>
+                          <div className="font-display text-xl font-extrabold text-foreground">
+                            ₹{Number(p.price_inr)}
+                          </div>
                           {isCombo && (
                             <span className="inline-block rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
                               Best Value
@@ -283,8 +339,14 @@ function Profile() {
                         </div>
                       </div>
 
-                      <h3 className="mt-3 font-display font-bold text-foreground text-sm sm:text-base">{p.title}</h3>
-                      {p.description && <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{p.description}</p>}
+                      <h3 className="mt-3 font-display font-bold text-foreground text-sm sm:text-base">
+                        {p.title}
+                      </h3>
+                      {p.description && (
+                        <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+                          {p.description}
+                        </p>
+                      )}
                     </div>
 
                     <div className="mt-4 pt-3 border-t">
@@ -301,7 +363,10 @@ function Profile() {
                           onClick={() => buy(p)}
                         >
                           {buyingPlan === p.code ? (
-                            <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />Opening...</>
+                            <>
+                              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                              Opening...
+                            </>
                           ) : (
                             `Pay Rs.${Number(p.price_inr)}`
                           )}
@@ -315,7 +380,10 @@ function Profile() {
 
             <div className="flex items-center gap-2.5 rounded-2xl border bg-card/60 p-4 text-xs text-muted-foreground">
               <ShieldCheck className="h-5 w-5 shrink-0 text-success" />
-              <span>Secure payment via Cashfree · UPI, Cards, Net Banking supported · Instant access on success.</span>
+              <span>
+                Secure payment via Cashfree · UPI, Cards, Net Banking supported · Instant access on
+                success.
+              </span>
             </div>
           </div>
         </div>
