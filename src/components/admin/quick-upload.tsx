@@ -214,7 +214,7 @@ export function QuickUpload({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-h-[90vh] max-w-2xl flex flex-col overflow-hidden p-0 gap-0 rounded-2xl">
+      <DialogContent className="max-h-[90vh] max-w-2xl flex flex-col overflow-hidden p-0 gap-0 rounded-2xl sm:rounded-3xl shadow-2xl">
 
         {/* ── Header ── */}
         <div className="shrink-0 border-b px-5 pt-5 pb-4">

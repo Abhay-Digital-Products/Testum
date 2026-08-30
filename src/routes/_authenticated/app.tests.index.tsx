@@ -36,10 +36,10 @@ const subjectIcon = (s: string) => {
 const TAB_CONFIG = {
   free: {
     title: "100% Free Practice Tests",
-    description: "Real NTA exam pattern, timer, question palette & instant performance scorecards without payment.",
+    description: "Standalone practice tests with real NTA exam interface, countdown timer, question palette & instant performance scorecards.",
     icon: Gift,
     gradient: "from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 text-emerald-700",
-    badge: "Free Access",
+    badge: "Standalone Free",
     badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-300",
   },
   chapter: {
@@ -104,43 +104,57 @@ function Tests() {
     })();
   }, []);
 
-  // Helper to accurately determine if a test is free
-  const checkIsFreeTest = (t: any) => {
+  // Helper to accurately determine if a test is a standalone free test (no part/full/chapter series)
+  const isStandaloneFreeTest = (t: any) => {
     if (!t) return false;
+    // If no series attached or series has no kind, it's a standalone test
+    if (!t.series_id || !t.test_series || !t.test_series?.kind) {
+      return true;
+    }
+    const kind = t.test_series?.kind;
+    // If it belongs to a categorized syllabus series (part, full, chapter), it is NOT standalone free
+    if (kind === "part" || kind === "full" || kind === "chapter") {
+      return false;
+    }
+    return Boolean(t.is_free) || t.test_series?.plan_code === "free" || (t.test_series?.title ?? "").toLowerCase().includes("free");
+  };
+
+  // Helper to check if a test is free to attempt (either standalone free test, or free demo test in a series)
+  const checkIsTestFreeToAttempt = (t: any) => {
+    if (!t) return false;
+    if (isStandaloneFreeTest(t)) return true;
     if (Boolean(t.is_free)) return true;
-    const plan = t.test_series?.plan_code ?? null;
-    if (!plan || plan === "free") return true;
-    const seriesTitle = (t.test_series?.title ?? "").toLowerCase();
-    const testTitle = (t.title ?? "").toLowerCase();
-    return seriesTitle.includes("free") || testTitle.includes("free");
+    if (t.test_series?.plan_code === "free") return true;
+    return false;
   };
 
   // Compute test counts per tab
   const counts = useMemo(() => {
     const res = { free: 0, chapter: 0, part: 0, full: 0 };
     for (const t of tests) {
-      if (checkIsFreeTest(t)) res.free++;
-      const kind = t.test_series?.kind;
-      if (kind === "chapter") res.chapter++;
-      else if (kind === "part") res.part++;
-      else if (kind === "full") res.full++;
+      if (isStandaloneFreeTest(t)) {
+        res.free++;
+      } else {
+        const kind = t.test_series?.kind;
+        if (kind === "chapter") res.chapter++;
+        else if (kind === "part") res.part++;
+        else if (kind === "full") res.full++;
+      }
     }
     return res;
   }, [tests]);
 
   const filtered = useMemo(() => {
     return tests.filter((t) => {
-      const isFreeTest = checkIsFreeTest(t);
-
       if (tab === "free") {
-        if (!isFreeTest) return false;
+        if (!isStandaloneFreeTest(t)) return false;
       } else {
-        if (t.test_series?.kind !== tab) return false;
+        if (t.test_series?.kind !== tab || isStandaloneFreeTest(t)) return false;
       }
 
       if (q) {
         const query = q.toLowerCase();
-        const titleMatch = t.title.toLowerCase().includes(query);
+        const titleMatch = (t.title ?? "").toLowerCase().includes(query);
         const seriesMatch = (t.test_series?.title ?? "").toLowerCase().includes(query);
         const syllabusMatch = (t.syllabus ?? "").toLowerCase().includes(query);
         if (!titleMatch && !seriesMatch && !syllabusMatch) return false;
@@ -152,8 +166,8 @@ function Tests() {
   // Test series belonging to the active tab
   const tabSeries = useMemo(() => {
     if (tab === "free") {
-      const freeOnly = allSeries.filter((s) => s.plan_code === "free" || !s.plan_code);
-      return freeOnly.length > 0 ? freeOnly : allSeries;
+      // ONLY return dedicated standalone free series; never return part/full/chapter series and never fallback to allSeries
+      return allSeries.filter((s) => (s.plan_code === "free" || s.title?.toLowerCase().includes("free")) && s.kind !== "chapter" && s.kind !== "part" && s.kind !== "full");
     }
     return allSeries.filter((s) => s.kind === tab);
   }, [allSeries, tab]);
@@ -410,21 +424,34 @@ function Tests() {
                   <Button variant="outline" size="sm" onClick={() => setQ("")} className="mt-4 rounded-xl text-xs cursor-pointer">
                     Clear Search
                   </Button>
+                ) : tab === "free" ? (
+                  <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+                    <Button asChild variant="outline" size="sm" className="rounded-xl text-xs cursor-pointer">
+                      <Link to="/app/tests" search={{ tab: "part" }}>Explore Part Syllabus Tests</Link>
+                    </Button>
+                    <Button asChild variant="outline" size="sm" className="rounded-xl text-xs cursor-pointer">
+                      <Link to="/app/tests" search={{ tab: "chapter" }}>Explore Chapter Tests</Link>
+                    </Button>
+                    <Button asChild variant="outline" size="sm" className="rounded-xl text-xs cursor-pointer">
+                      <Link to="/app/tests" search={{ tab: "full" }}>Explore Full Mocks</Link>
+                    </Button>
+                  </div>
                 ) : (
                   <Button asChild variant="outline" size="sm" className="mt-4 rounded-xl text-xs cursor-pointer">
-                    <Link to="/app/tests" search={{ tab: "part" }}>View Part Syllabus Tests</Link>
+                    <Link to="/app/tests" search={{ tab: "free" }}>View Free Tests</Link>
                   </Button>
                 )}
               </div>
             ) : (
               <div className="grid gap-3 min-w-0">
                 {filtered.map((t, index) => {
-                  const subj = t.test_series?.subject ?? "mixed";
+                  const subj = t.test_series?.subject ?? (Array.isArray(t.subject_scope) && t.subject_scope.length === 1 ? t.subject_scope[0] : "mixed");
                   const Icon = subjectIcon(subj);
                   const done = attemptedIds.has(t.id);
-                  const isFreeTest = checkIsFreeTest(t);
-                  const plan = isFreeTest ? null : ((t.test_series?.plan_code ?? t.test_series?.kind ?? null) as PlanCode | null);
-                  const unlocked = isFreeTest || (!entLoading && hasAccess(plan, isFreeTest));
+                  const isFreeTest = checkIsTestFreeToAttempt(t);
+                  const isStandalone = isStandaloneFreeTest(t);
+                  const plan = (isFreeTest || isStandalone) ? null : ((t.test_series?.plan_code ?? t.test_series?.kind ?? null) as PlanCode | null);
+                  const unlocked = isFreeTest || isStandalone || (!entLoading && hasAccess(plan, isFreeTest));
                   const totalMarks = (t.total_questions || 180) * (t.marks_correct || 4);
 
                   return (
@@ -432,7 +459,7 @@ function Tests() {
                       key={t.id}
                       style={{ animationDelay: `${index * 35}ms` }}
                       className={"group relative rounded-2xl border bg-card p-3.5 sm:p-5 transition-all duration-200 hover:shadow-md animate-in fade-in-50 slide-in-from-bottom-2 fill-mode-both min-w-0 overflow-hidden " + (
-                        isFreeTest
+                        isStandalone || isFreeTest
                           ? "border-emerald-500/30 hover:border-emerald-500/60"
                           : unlocked
                           ? "hover:border-primary/40"
@@ -443,7 +470,7 @@ function Tests() {
                       <div className="flex items-start gap-3 min-w-0">
                         {/* Subject Icon */}
                         <div className={"grid h-10 w-10 sm:h-11 sm:w-11 shrink-0 place-items-center rounded-xl " + (
-                          isFreeTest
+                          isStandalone || isFreeTest
                             ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
                             : unlocked
                             ? "bg-primary/10 text-primary"
@@ -461,9 +488,13 @@ function Tests() {
                                 {t.title}
                               </h3>
                               <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground flex-wrap">
-                                <span className="font-medium text-foreground/70 truncate max-w-[140px] sm:max-w-none">{t.test_series?.title ?? "NEET Test Series"}</span>
+                                <span className="font-medium text-foreground/70 truncate max-w-[140px] sm:max-w-none">
+                                  {t.test_series?.title ?? "Standalone Free Practice Test"}
+                                </span>
                                 <span>·</span>
-                                <span className="capitalize font-semibold text-primary shrink-0">{t.test_series?.subject ?? "Mixed"}</span>
+                                <span className="capitalize font-semibold text-primary shrink-0">
+                                  {t.test_series?.subject ?? (Array.isArray(t.subject_scope) && t.subject_scope.length > 0 ? t.subject_scope.join(", ") : "All Subjects")}
+                                </span>
                                 {t.test_series?.planner_pdf_url ? (
                                   <>
                                     <span>·</span>
@@ -478,7 +509,7 @@ function Tests() {
                                       <FileText className="h-3 w-3" /> Planner PDF ↗
                                     </a>
                                   </>
-                                ) : (
+                                ) : t.test_series ? (
                                   <>
                                     <span>·</span>
                                     <button
@@ -493,13 +524,15 @@ function Tests() {
                                       <FileText className="h-3 w-3" /> Planner
                                     </button>
                                   </>
-                                )}
+                                ) : null}
                               </div>
                             </div>
 
                             {/* Status badge */}
                             <span className={"shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider " + (
-                              isFreeTest
+                              isStandalone
+                                ? "bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300"
+                                : isFreeTest
                                 ? "bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300"
                                 : !unlocked
                                 ? "bg-muted text-muted-foreground border border-border"
@@ -507,7 +540,7 @@ function Tests() {
                                 ? "bg-success/15 text-success border border-success/30"
                                 : "bg-primary/10 text-primary border border-primary/20"
                             )}>
-                              {isFreeTest ? "Free" : !unlocked ? "Locked" : done ? "Done" : "Ready"}
+                              {isStandalone ? "Free" : isFreeTest ? "Free Trial" : !unlocked ? "Locked" : done ? "Done" : "Ready"}
                             </span>
                           </div>
 
@@ -549,7 +582,7 @@ function Tests() {
                             asChild
                             size="sm"
                             className={"w-full h-10 font-bold rounded-xl shadow-xs " + (
-                              isFreeTest
+                              isStandalone || isFreeTest
                                 ? "bg-emerald-600 hover:bg-emerald-700 text-white"
                                 : "bg-primary hover:bg-primary/90 text-primary-foreground"
                             )}

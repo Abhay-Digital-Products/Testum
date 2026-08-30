@@ -142,10 +142,17 @@ function Home() {
 
     supabase
       .from("tests")
-      .select("id, title, duration_minutes, total_questions, marks_correct, is_free, test_series(kind, title, plan_code)")
+      .select("id, title, duration_minutes, total_questions, marks_correct, is_free, series_id, test_series(kind, title, plan_code)")
       .order("created_at", { ascending: false })
       .then(({ data }: any) => {
-        const freeOnly = (data ?? []).filter((t: any) => t.is_free || !t.test_series?.plan_code || t.test_series?.plan_code === "free");
+        const freeOnly = (data ?? []).filter((t: any) => {
+          const isStandalone = !t.series_id || !t.test_series || !t.test_series?.kind;
+          if (isStandalone) return true;
+          const isFreeSeries = t.test_series?.plan_code === "free" || (t.test_series?.title ?? "").toLowerCase().includes("free");
+          const isCategorized = t.test_series?.kind === "part" || t.test_series?.kind === "full" || t.test_series?.kind === "chapter";
+          if (isCategorized && !isFreeSeries) return false;
+          return Boolean(t.is_free || isFreeSeries);
+        });
         setFreeTests(freeOnly);
       })
       .catch(() => {});
@@ -557,10 +564,12 @@ function Home() {
                         <span className="rounded-md bg-emerald-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 border border-emerald-200">
                           100% Free
                         </span>
-                        <span className="text-[11px] font-semibold text-slate-400 capitalize">{ft.test_series?.kind ?? "Mock Test"}</span>
+                        <span className="text-[11px] font-semibold text-slate-400 capitalize">
+                          {!ft.test_series || !ft.test_series?.kind ? "Standalone Free Test" : `${ft.test_series.kind} Mock`}
+                        </span>
                       </div>
                       <h3 className="mt-4 font-display text-lg font-bold leading-snug">{ft.title}</h3>
-                      <p className="mt-2 text-xs leading-relaxed text-slate-600">{ft.test_series?.title ?? "NEET Practice Series"}</p>
+                      <p className="mt-2 text-xs leading-relaxed text-slate-600">{ft.test_series?.title ?? "Standalone Free Practice Test"}</p>
                       <div className="mt-4 flex items-center gap-3 text-xs font-medium text-slate-500 border-t border-slate-100 pt-3">
                         <span>{ft.total_questions} Questions</span>
                         <span>·</span>

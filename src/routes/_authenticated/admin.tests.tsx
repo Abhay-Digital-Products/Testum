@@ -174,15 +174,20 @@ function AdminTests() {
             {tests.map((t) => {
               const added = counts[t.id] ?? 0;
               const complete = added >= t.total_questions;
-              const isFree = t.is_free || t.test_series?.plan_code === "free" || !t.test_series?.plan_code;
+              const isStandalone = !t.series_id || !t.test_series;
+              const isFree = isStandalone || t.is_free || t.test_series?.plan_code === "free";
               return (
                 <div key={t.id} className="rounded-2xl border bg-card p-4">
                   <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-display font-semibold text-base">{t.title}</span>
-                        {isFree ? (
-                          <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-300">
+                        {isStandalone ? (
+                          <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300">
+                            STANDALONE FREE
+                          </span>
+                        ) : isFree ? (
+                          <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300">
                             100% FREE
                           </span>
                         ) : (
@@ -193,7 +198,7 @@ function AdminTests() {
                       </div>
 
                       <div className="mt-1 text-xs text-muted-foreground">
-                        Series: <b className="text-foreground">{t.test_series?.title}</b> · {t.duration_minutes}m · +{t.marks_correct}/{t.marks_wrong}
+                        Series: <b className="text-foreground">{t.test_series?.title ?? "Standalone (No Series)"}</b> · {t.duration_minutes}m · +{t.marks_correct}/{t.marks_wrong}
                         {t.opens_at && (" · Opens: " + new Date(t.opens_at).toLocaleString("en-IN"))}
                       </div>
 
@@ -242,7 +247,7 @@ function AdminTests() {
             <div className="flex flex-wrap gap-2">
               <QuickUpload
                 testId={activeTest.id}
-                defaultSubject={activeTest.test_series?.subject && activeTest.test_series.subject !== "mixed" ? activeTest.test_series.subject : "physics"}
+                defaultSubject={activeTest.test_series?.subject && activeTest.test_series.subject !== "mixed" ? activeTest.test_series.subject : (Array.isArray(activeTest.subject_scope) && activeTest.subject_scope[0]) || "physics"}
                 existingIndexes={questions.map((q) => q.order_index)}
                 onSaved={() => loadQuestions(activeTest)}
               />
@@ -541,7 +546,7 @@ function toLocalInput(iso?: string) {
 
 function TestForm({ series, existing, onSaved, onClose }: { series: any[]; existing?: any; onSaved: () => void; onClose?: () => void }) {
   const [open, setOpen] = useState(!!existing);
-  const [seriesId, setSeriesId] = useState(existing?.series_id ?? "");
+  const [seriesId, setSeriesId] = useState(existing?.series_id ? existing.series_id : "standalone");
   const [title, setTitle] = useState(existing?.title ?? "");
   const [duration, setDuration] = useState(existing?.duration_minutes ?? 180);
   const [totalQ, setTotalQ] = useState(existing?.total_questions ?? 180);
@@ -549,7 +554,7 @@ function TestForm({ series, existing, onSaved, onClose }: { series: any[]; exist
   const [mw, setMw] = useState(Number(existing?.marks_wrong ?? -1));
   const [opensAt, setOpensAt] = useState(toLocalInput(existing?.opens_at));
   const [syllabus, setSyllabus] = useState(existing?.syllabus ?? "");
-  const [isFree, setIsFree] = useState(Boolean(existing?.is_free ?? false));
+  const [isFree, setIsFree] = useState(Boolean(existing?.is_free ?? true));
   const [scope, setScope] = useState<string[]>(existing?.subject_scope ?? ["physics", "chemistry", "biology"]);
   const [busy, setBusy] = useState(false);
 
@@ -558,12 +563,12 @@ function TestForm({ series, existing, onSaved, onClose }: { series: any[]; exist
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!seriesId) return toast.error("Choose a series");
     if (scope.length === 0) return toast.error("Pick at least one subject");
     setBusy(true);
 
+    const isStandalone = !seriesId || seriesId === "standalone";
     const payload: any = {
-      series_id: seriesId,
+      series_id: isStandalone ? null : seriesId,
       title: title.trim(),
       duration_minutes: duration,
       total_questions: totalQ,
@@ -571,7 +576,7 @@ function TestForm({ series, existing, onSaved, onClose }: { series: any[]; exist
       marks_wrong: mw,
       opens_at: new Date(opensAt).toISOString(),
       syllabus: syllabus.trim() || null,
-      is_free: isFree,
+      is_free: isStandalone ? true : isFree,
       subject_scope: scope,
       updated_at: new Date().toISOString(),
     };
@@ -602,19 +607,24 @@ function TestForm({ series, existing, onSaved, onClose }: { series: any[]; exist
         <form onSubmit={submit} className="space-y-4 pt-1">
           {/* Series Selection */}
           <div>
-            <Label className="text-sm font-semibold">Test Series</Label>
+            <Label className="text-sm font-semibold">Test Category & Series</Label>
             <Select
               value={seriesId}
               onValueChange={(id) => {
                 setSeriesId(id);
-                const s = series.find((item) => item.id === id);
-                if (s && (!s.plan_code || s.plan_code === "free" || s.title?.toLowerCase().includes("free"))) {
+                if (id === "standalone") {
                   setIsFree(true);
+                } else {
+                  const s = series.find((item) => item.id === id);
+                  if (s && (!s.plan_code || s.plan_code === "free" || s.title?.toLowerCase().includes("free"))) {
+                    setIsFree(true);
+                  }
                 }
               }}
             >
-              <SelectTrigger className="mt-1"><SelectValue placeholder="Select parent series" /></SelectTrigger>
+              <SelectTrigger className="mt-1"><SelectValue placeholder="Select test series" /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="standalone">✨ Standalone Free Test (No Series / 100% Free Practice)</SelectItem>
                 {series.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
                     {s.title} ({s.kind} - {(!s.plan_code || s.plan_code === "free") ? "Free" : "Paid"})
@@ -622,6 +632,11 @@ function TestForm({ series, existing, onSaved, onClose }: { series: any[]; exist
                 ))}
               </SelectContent>
             </Select>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {(!seriesId || seriesId === "standalone")
+                ? "This test will appear as a standalone test in the Free Practice Tests section."
+                : "This test will appear under its respective category series."}
+            </p>
           </div>
 
           {/* Test Title */}

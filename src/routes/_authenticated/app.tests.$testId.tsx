@@ -56,11 +56,12 @@ function Instructions() {
     })();
   }, [testId]);
 
-  const rawPlan = test?.test_series?.plan_code ?? null;
+  const isStandalone = !test?.series_id || !test?.test_series;
+  const rawPlan = isStandalone ? null : (test?.test_series?.plan_code ?? test?.test_series?.kind ?? null);
   const isFreeTest =
+    isStandalone ||
     Boolean(test?.is_free) ||
     rawPlan === "free" ||
-    !rawPlan ||
     (test?.test_series?.title ?? "").toLowerCase().includes("free") ||
     (test?.title ?? "").toLowerCase().includes("free");
   const planCode = isFreeTest ? null : (rawPlan as PlanCode | null);
@@ -89,7 +90,7 @@ function Instructions() {
 
       <div className="rounded-3xl border bg-hero p-6 text-primary-foreground shadow-elegant">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="text-xs opacity-90 uppercase tracking-wider">{test.test_series?.title}</div>
+          <div className="text-xs opacity-90 uppercase tracking-wider">{test.test_series?.title ?? "Standalone Free Practice Test"}</div>
           {test.test_series?.planner_pdf_url && (
             <Button
               asChild
