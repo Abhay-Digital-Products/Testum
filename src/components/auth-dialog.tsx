@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,8 +19,24 @@ const signUpSchema = z.object({
   studentClass: z.enum(["11th", "12th", "dropper"], { message: "Select your class" }),
 });
 
-export function AuthDialog({ trigger, defaultOpen, defaultTab = "signin", onOpen }: { trigger?: React.ReactNode; defaultOpen?: boolean; defaultTab?: "signin" | "signup"; onOpen?: () => void }) {
-  const [open, setOpen] = useState(!!defaultOpen);
+export function AuthDialog({
+  trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+  defaultOpen,
+  defaultTab = "signin",
+  onOpen,
+}: {
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  defaultOpen?: boolean;
+  defaultTab?: "signin" | "signup";
+  onOpen?: () => void;
+}) {
+  const isControlled = typeof controlledOpen === "boolean";
+  const [internalOpen, setInternalOpen] = useState(!!defaultOpen);
+  const open = isControlled ? controlledOpen : internalOpen;
   const [activeTab, setActiveTab] = useState<"signin" | "signup">(defaultTab);
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -31,10 +47,19 @@ export function AuthDialog({ trigger, defaultOpen, defaultTab = "signin", onOpen
   const [studentClass, setStudentClass] = useState<"11th" | "12th" | "dropper" | "">("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleOpenChange = (newOpen: boolean) => {
-    setOpen(newOpen);
-    if (newOpen) {
+  useEffect(() => {
+    if (defaultTab) {
       setActiveTab(defaultTab);
+    }
+  }, [defaultTab, open]);
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!isControlled) {
+      setInternalOpen(newOpen);
+    }
+    controlledOnOpenChange?.(newOpen);
+    if (newOpen) {
+      if (defaultTab) setActiveTab(defaultTab);
       onOpen?.();
     }
   };
@@ -49,7 +74,7 @@ export function AuthDialog({ trigger, defaultOpen, defaultTab = "signin", onOpen
       return;
     }
     toast.success("Welcome back!");
-    setOpen(false);
+    handleOpenChange(false);
     router.navigate({ to: "/app" });
   };
 
@@ -83,14 +108,14 @@ export function AuthDialog({ trigger, defaultOpen, defaultTab = "signin", onOpen
       return;
     }
     toast.success("Account created  -  you're in!");
-    setOpen(false);
+    handleOpenChange(false);
     router.navigate({ to: "/app" });
   };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent className="sm:max-w-md max-h-[92vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] sm:max-w-md max-h-[92vh] overflow-y-auto p-5 sm:p-6 rounded-2xl sm:rounded-3xl">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">Welcome to Testum</DialogTitle>
           <DialogDescription>Sign in to start your NEET 2027 prep.</DialogDescription>

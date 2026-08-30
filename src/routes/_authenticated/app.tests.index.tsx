@@ -143,43 +143,43 @@ function Tests() {
   const ActiveIcon = activeConf.icon;
 
   return (
-    <div className="space-y-4 max-w-5xl mx-auto pb-16">
+    <div className="space-y-4 max-w-5xl mx-auto w-full min-w-0 pb-16">
       {/* Top Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="font-display text-xl font-black sm:text-3xl tracking-tight">Test Series</h1>
-          <p className="mt-0.5 text-xs sm:text-sm text-muted-foreground">
-            Select your category to begin.
+      <div className="flex items-center justify-between gap-3 min-w-0">
+        <div className="min-w-0">
+          <h1 className="font-display text-xl font-black sm:text-2xl lg:text-3xl tracking-tight text-foreground truncate">Test Series</h1>
+          <p className="mt-0.5 text-xs sm:text-sm text-muted-foreground truncate">
+            Select your category to begin practicing.
           </p>
         </div>
-        <Button asChild variant="outline" size="sm" className="rounded-xl border-primary/30 text-primary hover:bg-primary/5 font-semibold text-xs">
+        <Button asChild variant="outline" size="sm" className="rounded-xl border-primary/30 text-primary hover:bg-primary/5 font-semibold text-xs shrink-0 h-8 sm:h-9 px-3">
           <Link to="/app/pricing"><Crown className="mr-1.5 h-3.5 w-3.5 text-primary" /> Unlock Plans</Link>
         </Button>
       </div>
 
       {/* Search Input */}
-      <div className="relative">
+      <div className="relative w-full">
         <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search tests..."
+          placeholder="Search test name, syllabus or topic..."
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="pl-10 h-11 rounded-xl text-sm bg-card border-border/80 shadow-xs"
+          className="pl-10 pr-16 h-10 sm:h-11 rounded-xl text-sm bg-card border-border/80 shadow-xs w-full"
         />
         {q && (
           <button
             onClick={() => setQ("")}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground hover:text-foreground"
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded"
           >
             Clear
           </button>
         )}
       </div>
 
-      {/* Tabs Switcher - Pill Bar matching exact design */}
-      <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
-        <div className="w-full rounded-full border border-blue-200/90 dark:border-blue-900/60 bg-white/95 dark:bg-card/95 p-1 sm:p-1.5 shadow-sm">
-          <div className="flex items-center justify-between divide-x divide-slate-200/90 dark:divide-slate-800/80">
+      {/* Tabs Switcher - Fully Responsive Pill Bar */}
+      <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full min-w-0">
+        <div className="w-full rounded-2xl sm:rounded-full border border-blue-200/90 dark:border-blue-900/60 bg-white/95 dark:bg-card/95 p-1 sm:p-1.5 shadow-sm overflow-hidden">
+          <div className="flex sm:grid sm:grid-cols-4 items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth">
             {([
               { key: "free",    label: "Free",    icon: Gift,     count: counts.free },
               { key: "chapter", label: "Chapter", icon: BookOpen, count: counts.chapter },
@@ -192,31 +192,31 @@ function Tests() {
                   key={key}
                   type="button"
                   onClick={() => setTab(key as any)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2.5 px-2 sm:px-4 py-1.5 sm:py-2 rounded-full transition-all duration-200 select-none ${
+                  className={`shrink-0 sm:shrink min-w-[80px] sm:min-w-0 flex-1 flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl sm:rounded-full transition-all duration-200 select-none ${
                     isActive
-                      ? "bg-blue-50/90 dark:bg-blue-950/60 ring-1 ring-blue-300 dark:ring-blue-700 shadow-2xs font-bold text-blue-700 dark:text-blue-300"
-                      : "text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40 font-medium"
+                      ? "bg-blue-50 dark:bg-blue-950/70 ring-1 ring-blue-400/50 dark:ring-blue-600 shadow-2xs font-bold text-blue-700 dark:text-blue-300"
+                      : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40 font-medium"
                   }`}
                 >
                   {/* Left Circular Icon */}
                   <div
-                    className={`grid h-7 w-7 sm:h-8 sm:w-8 shrink-0 place-items-center rounded-full transition-colors ${
+                    className={`grid h-6 w-6 sm:h-7 sm:w-7 shrink-0 place-items-center rounded-full transition-colors ${
                       isActive
                         ? "bg-blue-600 text-white shadow-xs"
                         : "bg-blue-50 text-blue-600 dark:bg-blue-950/80 dark:text-blue-400"
                     }`}
                   >
-                    <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   </div>
 
                   {/* Label */}
-                  <span className="text-xs sm:text-sm tracking-tight">{label}</span>
+                  <span className="text-xs sm:text-sm tracking-tight whitespace-nowrap">{label}</span>
 
                   {/* Count Pill Badge */}
                   <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold transition-colors ${
+                    className={`shrink-0 rounded-full px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-[11px] font-bold transition-colors ${
                       isActive
-                        ? "bg-blue-600/15 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 ring-1 ring-blue-400/30"
+                        ? "bg-blue-600/15 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300 ring-1 ring-blue-400/30"
                         : "bg-blue-50 text-blue-600 dark:bg-blue-950/80 dark:text-blue-400"
                     }`}
                   >
@@ -228,17 +228,16 @@ function Tests() {
           </div>
         </div>
 
-
-        {/* Dynamic Category Hero Card */}
-        <div className={"mt-3 rounded-2xl border bg-gradient-to-r p-3.5 sm:p-5 transition-all duration-300 " + activeConf.gradient}>
+        {/* Dynamic Category Hero Banner */}
+        <div className={"mt-3 rounded-2xl border bg-gradient-to-r p-3.5 sm:p-4.5 transition-all duration-300 min-w-0 overflow-hidden " + activeConf.gradient}>
           <div className="flex items-center gap-3">
             <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-card border shadow-xs">
               <ActiveIcon className="h-4 w-4" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="font-display text-sm sm:text-base font-bold text-foreground">{activeConf.title}</h2>
-                <span className={"rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border " + activeConf.badgeColor}>
+                <h2 className="font-display text-sm sm:text-base font-bold text-foreground truncate">{activeConf.title}</h2>
+                <span className={"rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border shrink-0 " + activeConf.badgeColor}>
                   {filtered.length} tests
                 </span>
               </div>
@@ -254,13 +253,13 @@ function Tests() {
           <TabsContent
             key={k}
             value={k}
-            className="mt-4 space-y-3 focus-visible:outline-none animate-in fade-in-50 slide-in-from-bottom-2 duration-300"
+            className="mt-4 space-y-3 focus-visible:outline-none animate-in fade-in-50 slide-in-from-bottom-2 duration-300 min-w-0"
           >
             {dataLoading ? (
               <TestListSkeleton count={4} />
             ) : filtered.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border bg-card/50 p-10 text-center animate-in fade-in-50 duration-200">
-                <div className="relative mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary">
+              <div className="rounded-2xl border border-dashed border-border bg-card/50 p-8 sm:p-10 text-center animate-in fade-in-50 duration-200">
+                <div className="relative mx-auto grid h-12 w-12 sm:h-14 sm:w-14 place-items-center rounded-2xl bg-primary/10 text-primary">
                   <ListChecks className="h-6 w-6 animate-pulse" />
                   <span className="absolute -top-1 -right-1 flex h-3 w-3">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
@@ -269,7 +268,7 @@ function Tests() {
                 </div>
                 <h3 className="mt-4 font-display font-bold text-base text-foreground">No tests found</h3>
                 <p className="mt-1 text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
-                  {q ? ("No tests matched \"" + q + "\". Try clearing your search term.") : ("No " + activeConf.title.toLowerCase() + " added yet. Switch to Free Tests or check back soon.")}
+                  {q ? (`No tests matched "${q}". Try clearing your search term.`) : (`No ${activeConf.title.toLowerCase()} added yet. Switch to Free Tests or check back soon.`)}
                 </p>
                 {q ? (
                   <Button variant="outline" size="sm" onClick={() => setQ("")} className="mt-4 rounded-xl text-xs">
@@ -282,7 +281,7 @@ function Tests() {
                 )}
               </div>
             ) : (
-              <div className="grid gap-3">
+              <div className="grid gap-3 min-w-0">
                 {filtered.map((t, index) => {
                   const subj = t.test_series?.subject ?? "mixed";
                   const Icon = subjectIcon(subj);
@@ -295,8 +294,8 @@ function Tests() {
                   return (
                     <div
                       key={t.id}
-                      style={{ animationDelay: (index * 40) + "ms" }}
-                      className={"group relative rounded-2xl border bg-card p-3.5 sm:p-5 transition-all duration-200 hover:shadow-md animate-in fade-in-50 slide-in-from-bottom-2 fill-mode-both " + (
+                      style={{ animationDelay: `${index * 35}ms` }}
+                      className={"group relative rounded-2xl border bg-card p-3.5 sm:p-5 transition-all duration-200 hover:shadow-md animate-in fade-in-50 slide-in-from-bottom-2 fill-mode-both min-w-0 overflow-hidden " + (
                         isFreeTest
                           ? "border-emerald-500/30 hover:border-emerald-500/60"
                           : unlocked
@@ -304,10 +303,10 @@ function Tests() {
                           : "opacity-90"
                       )}
                     >
-                      {/* Top Row: Icon + Info + Badge+Button */}
-                      <div className="flex items-start gap-3">
+                      {/* Top Row: Icon + Info + Badge */}
+                      <div className="flex items-start gap-3 min-w-0">
                         {/* Subject Icon */}
-                        <div className={"grid h-11 w-11 shrink-0 place-items-center rounded-xl " + (
+                        <div className={"grid h-10 w-10 sm:h-11 sm:w-11 shrink-0 place-items-center rounded-xl " + (
                           isFreeTest
                             ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
                             : unlocked
@@ -320,54 +319,53 @@ function Tests() {
                         {/* Main Content */}
                         <div className="min-w-0 flex-1">
                           {/* Title row */}
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="font-display text-sm sm:text-base font-bold text-foreground group-hover:text-primary transition-colors leading-snug">
-                                  {t.title}
-                                </span>
-
-                              </div>
+                          <div className="flex items-start justify-between gap-2 min-w-0">
+                            <div className="min-w-0 flex-1">
+                              <h3 className="font-display text-sm sm:text-base font-bold text-foreground group-hover:text-primary transition-colors leading-snug break-words">
+                                {t.title}
+                              </h3>
                               <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground flex-wrap">
-                                <span className="font-medium text-foreground/70 truncate max-w-[160px] sm:max-w-none">{t.test_series?.title ?? "NEET Test Series"}</span>
+                                <span className="font-medium text-foreground/70 truncate max-w-[140px] sm:max-w-none">{t.test_series?.title ?? "NEET Test Series"}</span>
                                 <span>·</span>
                                 <span className="capitalize font-semibold text-primary shrink-0">{t.test_series?.subject ?? "Mixed"}</span>
                               </div>
                             </div>
 
-                            {/* Status badge — top right on mobile */}
+                            {/* Status badge */}
                             <span className={"shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider " + (
-                              !unlocked
+                              isFreeTest
+                                ? "bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300"
+                                : !unlocked
                                 ? "bg-muted text-muted-foreground border border-border"
                                 : done
                                 ? "bg-success/15 text-success border border-success/30"
                                 : "bg-primary/10 text-primary border border-primary/20"
                             )}>
-                              {!unlocked ? "Locked" : done ? "Done" : "Ready"}
+                              {isFreeTest ? "Free" : !unlocked ? "Locked" : done ? "Done" : "Ready"}
                             </span>
                           </div>
 
                           {/* Meta pills */}
                           <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                            <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-medium">
+                            <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-medium shrink-0">
                               <ListChecks className="h-3 w-3 text-primary" /> {t.total_questions}Q
                             </span>
-                            <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-medium">
+                            <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-medium shrink-0">
                               <Clock className="h-3 w-3 text-primary" /> {t.duration_minutes}m
                             </span>
-                            <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-medium">
+                            <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-medium shrink-0">
                               <Trophy className="h-3 w-3 text-primary" /> {totalMarks} marks
                             </span>
                             {t.opens_at && (
-                              <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-medium">
+                              <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-medium shrink-0">
                                 <Calendar className="h-3 w-3 text-primary" /> {new Date(t.opens_at).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}
                               </span>
                             )}
                           </div>
 
-                          {/* Syllabus (hidden on very small, shown on sm+) */}
+                          {/* Syllabus */}
                           {t.syllabus && (
-                            <div className="mt-2 hidden sm:flex items-start gap-2 rounded-xl bg-muted/40 p-2 text-xs text-foreground/90 border border-border/60">
+                            <div className="mt-2 flex items-start gap-2 rounded-xl bg-muted/40 p-2 text-xs text-foreground/90 border border-border/60">
                               <BookOpen className="h-3.5 w-3.5 shrink-0 text-primary mt-0.5" />
                               <div className="min-w-0 leading-relaxed">
                                 <span className="font-bold text-foreground mr-1">Syllabus:</span>
@@ -378,7 +376,7 @@ function Tests() {
                         </div>
                       </div>
 
-                      {/* Bottom CTA Button — full width on mobile */}
+                      {/* Bottom CTA Button */}
                       <div className="mt-3 pt-3 border-t border-border/60">
                         {unlocked ? (
                           <Button

@@ -11,7 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   ArrowRight, ShieldCheck, Monitor, BarChart3, CloudUpload, LineChart, FileText,
   BookOpen, Layers, Trophy, Check, CheckCircle2, Star, Zap, CalendarCheck, RefreshCw,
-  FileQuestion, Sparkles, Send, Mail, Menu, LayoutDashboard,
+  FileQuestion, Sparkles, Send, Mail, Menu, LayoutDashboard, ChevronRight, Gift, Crown,
+  LogIn, UserPlus, Phone,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -106,8 +107,14 @@ function Home() {
   const [user, setUser] = useState<any>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [freeTests, setFreeTests] = useState<any[]>([]);
-
   const [activePlans, setActivePlans] = useState<any[]>([]);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authTab, setAuthTab] = useState<"signin" | "signup">("signin");
+
+  const openAuth = (tab: "signin" | "signup" = "signin") => {
+    setAuthTab(tab);
+    setAuthOpen(true);
+  };
 
   useEffect(() => {
     supabase.auth.getUser()
@@ -161,6 +168,16 @@ function Home() {
   const comboPrice = planPriceMap("combo", 149);
   const comboActive = isPlanActive("combo");
 
+  const mobileNavItems = [
+    { href: "#free-tests", label: "Free Tests", icon: Gift, badge: "100% Free", badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+    { href: "/app/tests", label: "Test Series", icon: BookOpen, isRoute: true },
+    { href: "#pricing", label: "Plans & Pricing", icon: Crown, badge: "From ₹99", badgeColor: "bg-blue-50 text-blue-700 border-blue-200" },
+    { href: "#features", label: "Features", icon: Layers },
+    { href: "#results", label: "How It Works", icon: BarChart3 },
+    { href: "#faq", label: "FAQ", icon: FileQuestion },
+    { href: "#support", label: "Contact & Support", icon: Mail },
+  ];
+
   return (
     <div className="min-h-screen bg-white text-[#0F172A] scroll-smooth">
       {/* NAV */}
@@ -174,13 +191,26 @@ function Home() {
           </nav>
           <div className="hidden items-center gap-2 lg:flex">
             {user ? (
-              <Button asChild size="sm" className="rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90">
+              <Button asChild size="sm" className="rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 shadow-sm">
                 <Link to="/app"><LayoutDashboard className="mr-1.5 h-4 w-4" /> Go to Dashboard</Link>
               </Button>
             ) : (
               <>
-                <AuthDialog defaultTab="signin" trigger={<Button variant="outline" size="sm" className="rounded-lg border-slate-200 text-sm font-medium">Log in</Button>} />
-                <AuthDialog defaultTab="signup" trigger={<Button size="sm" className="rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90">Sign up</Button>} />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openAuth("signin")}
+                  className="rounded-lg border-slate-200 text-sm font-medium hover:bg-slate-50"
+                >
+                  Log in
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => openAuth("signup")}
+                  className="rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 shadow-sm"
+                >
+                  Sign up
+                </Button>
               </>
             )}
           </div>
@@ -199,33 +229,105 @@ function Home() {
                   <span className="sr-only">Toggle navigation menu</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-80 p-6">
-                <SheetHeader className="text-left border-b border-slate-100 pb-4">
-                  <SheetTitle><Logo /></SheetTitle>
-                </SheetHeader>
-                <div className="mt-6 flex flex-col gap-4">
-                  {navLinks.map((l) => (
-                    <a
-                      key={l.href}
-                      href={l.href}
-                      onClick={() => setMobileOpen(false)}
-                      className="text-base font-medium text-slate-700 transition hover:text-primary"
-                    >
-                      {l.label}
-                    </a>
-                  ))}
+              <SheetContent side="right" className="w-[88vw] max-w-sm p-0 flex flex-col justify-between bg-white overflow-y-auto">
+                <div className="p-5 border-b border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <Logo />
+                    <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold text-primary">NEET 2027</span>
+                  </div>
+
+                  {/* Highlights banner */}
+                  <div className="mt-4 rounded-xl bg-gradient-to-r from-blue-500/10 via-primary/5 to-transparent border border-blue-500/15 p-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-primary shrink-0" />
+                      <div className="text-xs font-semibold text-slate-800">Real NTA CBT Platform</div>
+                    </div>
+                    <div className="mt-1 text-[11px] text-slate-600">340+ Chapter, Part & Full mock tests with AI scorecards.</div>
+                  </div>
+
+                  {/* Nav links */}
+                  <div className="mt-5 space-y-1">
+                    {mobileNavItems.map((item) => {
+                      const Icon = item.icon;
+                      const content = (
+                        <div className="flex items-center justify-between w-full p-2.5 rounded-xl hover:bg-slate-50 transition-colors text-slate-700 hover:text-primary font-medium text-sm">
+                          <div className="flex items-center gap-3">
+                            <div className="grid h-8 w-8 place-items-center rounded-lg bg-slate-100 text-slate-600 group-hover:bg-primary/10 group-hover:text-primary">
+                              <Icon className="h-4 w-4" />
+                            </div>
+                            <span>{item.label}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {item.badge && (
+                              <span className={"rounded-md px-2 py-0.5 text-[10px] font-bold border " + item.badgeColor}>
+                                {item.badge}
+                              </span>
+                            )}
+                            <ChevronRight className="h-4 w-4 text-slate-400" />
+                          </div>
+                        </div>
+                      );
+
+                      if (item.isRoute) {
+                        return (
+                          <Link key={item.href} to={item.href as never} onClick={() => setMobileOpen(false)} className="block">
+                            {content}
+                          </Link>
+                        );
+                      }
+                      return (
+                        <a key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className="block">
+                          {content}
+                        </a>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="mt-8 border-t border-slate-100 pt-6 flex flex-col gap-3">
+
+                {/* Bottom Actions & Support in Drawer */}
+                <div className="p-5 bg-slate-50/70 border-t border-slate-100 space-y-4">
                   {user ? (
-                    <Button asChild size="lg" className="w-full rounded-xl bg-primary font-semibold text-primary-foreground">
-                      <Link to="/app" onClick={() => setMobileOpen(false)}><LayoutDashboard className="mr-2 h-4 w-4" /> Go to Dashboard</Link>
+                    <Button asChild size="lg" className="w-full h-11 rounded-xl bg-primary font-semibold text-primary-foreground shadow-md shadow-primary/20">
+                      <Link to="/app" onClick={() => setMobileOpen(false)}>
+                        <LayoutDashboard className="mr-2 h-4 w-4" /> Go to Dashboard
+                      </Link>
                     </Button>
                   ) : (
-                    <>
-                      <AuthDialog defaultTab="signin" onOpen={() => setMobileOpen(false)} trigger={<Button variant="outline" size="lg" className="w-full rounded-xl border-slate-200 font-semibold">Log in</Button>} />
-                      <AuthDialog defaultTab="signup" onOpen={() => setMobileOpen(false)} trigger={<Button size="lg" className="w-full rounded-xl bg-primary font-semibold text-primary-foreground">Sign up</Button>} />
-                    </>
+                    <div className="flex flex-col gap-2.5">
+                      <Button
+                        size="lg"
+                        className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 font-bold text-primary-foreground shadow-md shadow-primary/25"
+                        onClick={() => {
+                          setMobileOpen(false);
+                          openAuth("signup");
+                        }}
+                      >
+                        <UserPlus className="mr-2 h-4 w-4" /> Sign up for Free
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        className="w-full h-11 rounded-xl border-slate-300 font-semibold text-slate-700 hover:bg-white"
+                        onClick={() => {
+                          setMobileOpen(false);
+                          openAuth("signin");
+                        }}
+                      >
+                        <LogIn className="mr-2 h-4 w-4" /> Log in to Account
+                      </Button>
+                    </div>
                   )}
+
+                  {/* Help channels */}
+                  <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-500">
+                    <a href={SUPPORT.telegram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-primary">
+                      <Send className="h-3.5 w-3.5 text-primary" /> Telegram
+                    </a>
+                    <span>·</span>
+                    <a href={`mailto:${SUPPORT.email}`} className="flex items-center gap-1.5 hover:text-primary">
+                      <Mail className="h-3.5 w-3.5 text-primary" /> Email Support
+                    </a>
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>
@@ -254,11 +356,13 @@ function Home() {
                   <Link to="/app">Go to Dashboard <ArrowRight className="ml-1.5 h-4 w-4" /></Link>
                 </Button>
               ) : (
-                <AuthDialog defaultTab="signup" trigger={
-                  <Button size="lg" className="h-12 rounded-xl bg-primary px-6 font-semibold text-primary-foreground shadow-elegant hover:bg-primary/90">
-                    Start your first CBT test <ArrowRight className="ml-1.5 h-4 w-4" />
-                  </Button>
-                } />
+                <Button
+                  size="lg"
+                  onClick={() => openAuth("signup")}
+                  className="h-12 rounded-xl bg-primary px-6 font-semibold text-primary-foreground shadow-elegant hover:bg-primary/90"
+                >
+                  Start your first CBT test <ArrowRight className="ml-1.5 h-4 w-4" />
+                </Button>
               )}
               <Button asChild size="lg" variant="outline" className="h-12 rounded-xl border-slate-200 px-6 font-semibold">
                 <a href="#pricing">View plans</a>
@@ -406,11 +510,13 @@ function Home() {
                 <Link to="/app/tests" search={{ tab: "free" }}>View All Free Tests <ArrowRight className="ml-1.5 h-4 w-4" /></Link>
               </Button>
             ) : (
-              <AuthDialog defaultTab="signup" trigger={
-                <Button size="lg" className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-soft">
-                  Unlock Free Tests <ArrowRight className="ml-1.5 h-4 w-4" />
-                </Button>
-              } />
+              <Button
+                size="lg"
+                onClick={() => openAuth("signup")}
+                className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-soft"
+              >
+                Unlock Free Tests <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Button>
             )}
           </div>
 
@@ -442,11 +548,12 @@ function Home() {
                           <Link to="/app/tests/$testId" params={{ testId: ft.id }}>Attempt Test Now <ArrowRight className="ml-1.5 h-4 w-4" /></Link>
                         </Button>
                       ) : (
-                        <AuthDialog defaultTab="signup" trigger={
-                          <Button className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
-                            Attempt Test Now <ArrowRight className="ml-1.5 h-4 w-4" />
-                          </Button>
-                        } />
+                        <Button
+                          onClick={() => openAuth("signup")}
+                          className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                        >
+                          Attempt Test Now <ArrowRight className="ml-1.5 h-4 w-4" />
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -467,11 +574,13 @@ function Home() {
                       <Link to="/app/tests">Browse Test Portal <ArrowRight className="ml-1.5 h-4 w-4" /></Link>
                     </Button>
                   ) : (
-                    <AuthDialog defaultTab="signup" trigger={
-                      <Button variant="outline" className="rounded-xl border-emerald-300 text-emerald-700 hover:bg-emerald-50">
-                        Create Student Account <ArrowRight className="ml-1.5 h-4 w-4" />
-                      </Button>
-                    } />
+                    <Button
+                      variant="outline"
+                      onClick={() => openAuth("signup")}
+                      className="rounded-xl border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                    >
+                      Create Student Account <ArrowRight className="ml-1.5 h-4 w-4" />
+                    </Button>
                   )}
                 </div>
               </div>
@@ -526,11 +635,13 @@ function Home() {
                       <Link to="/app/pricing">View tests <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
                     </Button>
                   ) : (
-                    <AuthDialog defaultTab="signin" trigger={
-                      <Button variant="outline" className="rounded-xl border-primary/30 font-semibold text-primary hover:bg-primary/5">
-                        View tests <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                      </Button>
-                    } />
+                    <Button
+                      variant="outline"
+                      onClick={() => openAuth("signin")}
+                      className="rounded-xl border-primary/30 font-semibold text-primary hover:bg-primary/5"
+                    >
+                      View tests <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                    </Button>
                   )}
                 </div>
               </div>
@@ -571,11 +682,13 @@ function Home() {
                     <Link to="/app/pricing">Get all plans now <ArrowRight className="ml-1.5 h-4 w-4" /></Link>
                   </Button>
                 ) : (
-                  <AuthDialog defaultTab="signup" trigger={
-                    <Button size="lg" className="h-12 rounded-xl bg-amber-500 px-6 font-semibold text-white hover:bg-amber-600">
-                      Get all plans now <ArrowRight className="ml-1.5 h-4 w-4" />
-                    </Button>
-                  } />
+                  <Button
+                    size="lg"
+                    onClick={() => openAuth("signup")}
+                    className="h-12 rounded-xl bg-amber-500 px-6 font-semibold text-white hover:bg-amber-600"
+                  >
+                    Get all plans now <ArrowRight className="ml-1.5 h-4 w-4" />
+                  </Button>
                 )}
               </div>
             </div>
@@ -620,11 +733,12 @@ function Home() {
                 Experience a free analysis <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             ) : (
-              <AuthDialog defaultTab="signup" trigger={
-                <button className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
-                  Experience a free analysis <ArrowRight className="h-3.5 w-3.5" />
-                </button>
-              } />
+              <button
+                onClick={() => openAuth("signup")}
+                className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+              >
+                Experience a free analysis <ArrowRight className="h-3.5 w-3.5" />
+              </button>
             )}
           </div>
 
@@ -710,11 +824,13 @@ function Home() {
                     <Link to="/app">Go to Dashboard</Link>
                   </Button>
                 ) : (
-                  <AuthDialog defaultTab="signup" trigger={
-                    <Button size="lg" className="h-12 rounded-xl bg-white px-6 font-semibold text-primary hover:bg-white/90">
-                      Start your first CBT test
-                    </Button>
-                  } />
+                  <Button
+                    size="lg"
+                    onClick={() => openAuth("signup")}
+                    className="h-12 rounded-xl bg-white px-6 font-semibold text-primary hover:bg-white/90"
+                  >
+                    Start your first CBT test
+                  </Button>
                 )}
                 <Button asChild size="lg" variant="outline" className="h-12 rounded-xl border-white/40 bg-transparent px-6 font-semibold text-primary-foreground hover:bg-white/10">
                   <a href="#pricing">View plans</a>
@@ -790,6 +906,9 @@ function Home() {
           </div>
         </div>
       </footer>
+
+      {/* Global Auth Dialog */}
+      <AuthDialog open={authOpen} onOpenChange={setAuthOpen} defaultTab={authTab} />
     </div>
   );
 }
