@@ -39,7 +39,14 @@ function Instructions() {
   const { hasAccess, loading: entLoading } = useEntitlements();
 
   useEffect(() => {
-    supabase.from("tests").select("id, title, duration_minutes, total_questions, marks_correct, marks_wrong, test_series(title, kind, plan_code, planner_pdf_url)").eq("id", testId).maybeSingle().then(({ data }: any) => setTest(data));
+    supabase
+      .from("tests")
+      .select(
+        "id, title, duration_minutes, total_questions, marks_correct, marks_wrong, test_series(title, kind, plan_code, planner_pdf_url)",
+      )
+      .eq("id", testId)
+      .maybeSingle()
+      .then(({ data }: any) => setTest(data));
     (async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return;
@@ -57,7 +64,9 @@ function Instructions() {
   }, [testId]);
 
   const isStandalone = !test?.series_id || !test?.test_series;
-  const rawPlan = isStandalone ? null : (test?.test_series?.plan_code ?? test?.test_series?.kind ?? null);
+  const rawPlan = isStandalone
+    ? null
+    : (test?.test_series?.plan_code ?? test?.test_series?.kind ?? null);
   const isFreeTest =
     isStandalone ||
     Boolean(test?.is_free) ||
@@ -68,29 +77,66 @@ function Instructions() {
   const unlocked = isFreeTest || (!entLoading && hasAccess(planCode, isFreeTest));
 
   const startAttempt = async () => {
-    if (!unlocked) { toast.error("Unlock this test series first."); return; }
+    if (!unlocked) {
+      toast.error("Unlock this test series first.");
+      return;
+    }
     setBusy(true);
-    if (resumeId) { navigate({ to: "/app/attempt/$attemptId", params: { attemptId: resumeId } }); return; }
+    if (resumeId) {
+      navigate({ to: "/app/attempt/$attemptId", params: { attemptId: resumeId } });
+      return;
+    }
     const { data: u } = await supabase.auth.getUser();
-    if (!u.user) { setBusy(false); return; }
+    if (!u.user) {
+      setBusy(false);
+      return;
+    }
     const { data: qs } = await supabase.from("questions").select("id").eq("test_id", testId);
-    if (!qs || qs.length === 0) { toast.error("No questions in this test yet."); setBusy(false); return; }
-    const { data: attempt, error } = await supabase.from("attempts").insert({ test_id: testId, user_id: u.user.id, status: "in_progress" }).select("id").single();
-    if (error || !attempt) { toast.error(error?.message ?? "Failed to start"); setBusy(false); return; }
-    const rows = qs.map((q: any) => ({ attempt_id: attempt.id, question_id: q.id, status: "not_visited" as const }));
+    if (!qs || qs.length === 0) {
+      toast.error("No questions in this test yet.");
+      setBusy(false);
+      return;
+    }
+    const { data: attempt, error } = await supabase
+      .from("attempts")
+      .insert({ test_id: testId, user_id: u.user.id, status: "in_progress" })
+      .select("id")
+      .single();
+    if (error || !attempt) {
+      toast.error(error?.message ?? "Failed to start");
+      setBusy(false);
+      return;
+    }
+    const rows = qs.map((q: any) => ({
+      attempt_id: attempt.id,
+      question_id: q.id,
+      status: "not_visited" as const,
+    }));
     await supabase.from("answers").insert(rows);
     navigate({ to: "/app/attempt/$attemptId", params: { attemptId: attempt.id } });
   };
 
-  if (!test) return <div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Loading…</div>;
+  if (!test)
+    return (
+      <div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">
+        Loading…
+      </div>
+    );
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
-      <Button asChild variant="ghost" size="sm"><Link to="/app/tests"><ArrowLeft className="mr-1 h-4 w-4"/>Back</Link></Button>
+      <Button asChild variant="ghost" size="sm">
+        <Link to="/app/tests">
+          <ArrowLeft className="mr-1 h-4 w-4" />
+          Back
+        </Link>
+      </Button>
 
       <div className="rounded-3xl border bg-hero p-6 text-primary-foreground shadow-elegant">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="text-xs opacity-90 uppercase tracking-wider">{test.test_series?.title ?? "Standalone Free Practice Test"}</div>
+          <div className="text-xs opacity-90 uppercase tracking-wider">
+            {test.test_series?.title ?? "Standalone Free Practice Test"}
+          </div>
           {test.test_series?.planner_pdf_url && (
             <Button
               asChild
@@ -118,20 +164,31 @@ function Instructions() {
           </div>
           <div className="rounded-xl bg-primary-foreground/10 p-3">
             <div className="text-xs opacity-90">Marking</div>
-            <div className="font-display text-lg font-bold">+{test.marks_correct}/{test.marks_wrong}</div>
+            <div className="font-display text-lg font-bold">
+              +{test.marks_correct}/{test.marks_wrong}
+            </div>
           </div>
         </div>
       </div>
 
       <div className="rounded-2xl border bg-card p-5">
         <div className="flex items-center gap-2">
-          <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary"><Info className="h-4 w-4"/></div>
+          <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary">
+            <Info className="h-4 w-4" />
+          </div>
           <h2 className="font-display text-lg font-semibold">General Instructions</h2>
         </div>
-        <p className="mt-3 text-sm text-muted-foreground">Please read the following instructions carefully:</p>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Please read the following instructions carefully:
+        </p>
         <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-relaxed">
           {NTA_INSTRUCTIONS.map((line, i) => (
-            <li key={i} className={line.startsWith("·") ? "list-none -ml-5 pl-4 text-muted-foreground" : ""}>{line.replace(/^·\s*/, "")}</li>
+            <li
+              key={i}
+              className={line.startsWith("·") ? "list-none -ml-5 pl-4 text-muted-foreground" : ""}
+            >
+              {line.replace(/^·\s*/, "")}
+            </li>
           ))}
         </ol>
       </div>
@@ -141,26 +198,38 @@ function Instructions() {
           <>
             {resumeId && (
               <div className="mb-4 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
-                You have an unfinished attempt for this test. Continue where you left off  -  your saved answers and timer are restored.
+                You have an unfinished attempt for this test. Continue where you left off - your
+                saved answers and timer are restored.
               </div>
             )}
             <label className="flex items-start gap-3 cursor-pointer">
-              <Checkbox checked={agreed} onCheckedChange={(v) => setAgreed(!!v)} className="mt-0.5" />
+              <Checkbox
+                checked={agreed}
+                onCheckedChange={(v) => setAgreed(!!v)}
+                className="mt-0.5"
+              />
               <span className="text-sm">
-                I have read all the instructions carefully. I understand that using unfair means or leaving the test window may lead to disqualification. I am ready to begin the test.
+                I have read all the instructions carefully. I understand that using unfair means or
+                leaving the test window may lead to disqualification. I am ready to begin the test.
               </span>
             </label>
             <Button disabled={!agreed || busy} onClick={startAttempt} className="mt-5 w-full h-12">
-              {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+              {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {resumeId ? "Resume my test" : "I am ready to begin"}
             </Button>
           </>
         ) : (
           <div className="text-center">
-            <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-muted text-muted-foreground"><Lock className="h-5 w-5"/></div>
+            <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-muted text-muted-foreground">
+              <Lock className="h-5 w-5" />
+            </div>
             <h3 className="mt-3 font-display font-semibold">This test is locked</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Purchase this test series to attempt it.</p>
-            <Button asChild className="mt-5 w-full h-12" disabled={entLoading}><Link to="/app/pricing">View plans</Link></Button>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Purchase this test series to attempt it.
+            </p>
+            <Button asChild className="mt-5 w-full h-12" disabled={entLoading}>
+              <Link to="/app/pricing">View plans</Link>
+            </Button>
           </div>
         )}
       </div>

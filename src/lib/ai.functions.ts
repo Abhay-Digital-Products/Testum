@@ -12,7 +12,9 @@ export const generateAiAnalysis = createServerFn({ method: "POST" })
 
     const { data: attempt, error: attErr } = await supabase
       .from("attempts")
-      .select("id, user_id, score, correct_count, wrong_count, unattempted_count, time_spent_seconds, test_id, tests(title, total_questions, marks_correct, marks_wrong, duration_minutes)")
+      .select(
+        "id, user_id, score, correct_count, wrong_count, unattempted_count, time_spent_seconds, test_id, tests(title, total_questions, marks_correct, marks_wrong, duration_minutes)",
+      )
       .eq("id", data.attemptId)
       .maybeSingle();
     if (attErr || !attempt) throw new Error("Attempt not found");
@@ -21,7 +23,9 @@ export const generateAiAnalysis = createServerFn({ method: "POST" })
     // Fetch all student answers with associated question details from Supabase
     const { data: answers } = await supabase
       .from("answers")
-      .select("is_correct, selected_option, time_spent_seconds, question_id, questions(subject, chapter, question_text, correct_option)")
+      .select(
+        "is_correct, selected_option, time_spent_seconds, question_id, questions(subject, chapter, question_text, correct_option)",
+      )
       .eq("attempt_id", data.attemptId);
 
     // Fetch all test questions as fallback in case relational join is null
@@ -31,12 +35,18 @@ export const generateAiAnalysis = createServerFn({ method: "POST" })
       .eq("test_id", attempt.test_id);
 
     const questionMap = new Map<string, any>();
-    for (const q of (testQuestions ?? [])) {
+    for (const q of testQuestions ?? []) {
       questionMap.set(q.id, q);
     }
 
     // Build subject and chapter statistics
-    type Stat = { total: number; correct: number; wrong: number; unattempted: number; timeSpent: number };
+    type Stat = {
+      total: number;
+      correct: number;
+      wrong: number;
+      unattempted: number;
+      timeSpent: number;
+    };
     const bySubject: Record<string, Stat> = {};
     const byChapter: Record<string, Stat> = {};
 
@@ -55,7 +65,13 @@ export const generateAiAnalysis = createServerFn({ method: "POST" })
       byChapter[c].timeSpent += time;
 
       const selected = a.selected_option ? String(a.selected_option).trim().toUpperCase() : null;
-      const isCorr = a.is_correct === true || (selected && selected === String(q?.correct_option || "").trim().toUpperCase());
+      const isCorr =
+        a.is_correct === true ||
+        (selected &&
+          selected ===
+            String(q?.correct_option || "")
+              .trim()
+              .toUpperCase());
       const isWrng = a.is_correct === false || (selected && !isCorr);
 
       if (isCorr) {
@@ -73,19 +89,19 @@ export const generateAiAnalysis = createServerFn({ method: "POST" })
     // Rank chapters by accuracy
     const chapterEntries = Object.entries(byChapter);
     const sortedWeakToStrong = [...chapterEntries].sort((a, b) => {
-      const accA = a[1].total ? (a[1].correct / a[1].total) : 0;
-      const accB = b[1].total ? (b[1].correct / b[1].total) : 0;
+      const accA = a[1].total ? a[1].correct / a[1].total : 0;
+      const accB = b[1].total ? b[1].correct / b[1].total : 0;
       return accA - accB;
     });
 
     const weak_topics = sortedWeakToStrong
-      .filter(([_, s]) => s.total > 0 && (s.correct / s.total) < 0.7)
+      .filter(([_, s]) => s.total > 0 && s.correct / s.total < 0.7)
       .slice(0, 6)
       .map(([name]) => name);
 
     const strong_topics = [...sortedWeakToStrong]
       .reverse()
-      .filter(([_, s]) => s.total > 0 && (s.correct / s.total) >= 0.7)
+      .filter(([_, s]) => s.total > 0 && s.correct / s.total >= 0.7)
       .slice(0, 6)
       .map(([name]) => name);
 
@@ -97,7 +113,9 @@ export const generateAiAnalysis = createServerFn({ method: "POST" })
     }
 
     const totalAttempted = attempt.correct_count + attempt.wrong_count;
-    const accuracy = totalAttempted ? Math.round((attempt.correct_count / totalAttempted) * 100) : 0;
+    const accuracy = totalAttempted
+      ? Math.round((attempt.correct_count / totalAttempted) * 100)
+      : 0;
     const testTitle = (attempt.tests as any)?.title ?? "NEET Mock Test";
     const minutes = Math.round(attempt.time_spent_seconds / 60);
 
@@ -106,8 +124,8 @@ export const generateAiAnalysis = createServerFn({ method: "POST" })
       accuracy >= 80
         ? "Excellent accuracy - focus on maintaining speed and eliminating minor calculation errors."
         : accuracy >= 60
-        ? "Good performance with solid core fundamentals. Prioritize negative-marking reduction in weaker chapters."
-        : "Foundational concepts need consolidation. Focus on high-weightage NCERT topics and formula revisions."
+          ? "Good performance with solid core fundamentals. Prioritize negative-marking reduction in weaker chapters."
+          : "Foundational concepts need consolidation. Focus on high-weightage NCERT topics and formula revisions."
     }`;
 
     let study_plan = `Day 1-2: Intensive NCERT theory review for ${weak_topics.slice(0, 2).join(" & ") || "weak chapters"}.
@@ -134,12 +152,15 @@ Generate JSON only with:
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${xaiKey}`,
+            Authorization: `Bearer ${xaiKey}`,
           },
           body: JSON.stringify({
             model: "grok-2-latest",
             messages: [
-              { role: "system", content: "You are an expert NEET analysis AI. Output valid JSON only." },
+              {
+                role: "system",
+                content: "You are an expert NEET analysis AI. Output valid JSON only.",
+              },
               { role: "user", content: prompt },
             ],
             response_format: { type: "json_object" },
@@ -153,7 +174,10 @@ Generate JSON only with:
           const parsed = JSON.parse(json.choices?.[0]?.message?.content || "{}");
           if (parsed.summary) ai_summary = parsed.summary;
           if (parsed.study_plan) {
-            study_plan = typeof parsed.study_plan === "string" ? parsed.study_plan : Object.values(parsed.study_plan).join("\n");
+            study_plan =
+              typeof parsed.study_plan === "string"
+                ? parsed.study_plan
+                : Object.values(parsed.study_plan).join("\n");
           }
         }
       } catch (e) {
@@ -183,4 +207,3 @@ Generate JSON only with:
       },
     };
   });
-

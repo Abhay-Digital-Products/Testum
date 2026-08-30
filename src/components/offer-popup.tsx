@@ -185,7 +185,10 @@ export function OfferPopup() {
                   <div className="flex items-center gap-1.5 truncate">
                     <Sparkles className="h-3.5 w-3.5 text-amber-300 shrink-0" />
                     <span className="text-[11px] text-slate-200 truncate">
-                      Use Code: <strong className="text-amber-300 font-mono tracking-wider text-xs">{offer.coupon_code}</strong>
+                      Use Code:{" "}
+                      <strong className="text-amber-300 font-mono tracking-wider text-xs">
+                        {offer.coupon_code}
+                      </strong>
                     </span>
                   </div>
                   <button

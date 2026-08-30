@@ -93,7 +93,7 @@ export const ExamImage = memo(function ExamImage({
     <div
       className={cn(
         "relative group rounded-2xl border bg-muted/15 p-2 overflow-hidden flex flex-col items-center justify-center",
-        containerClassName
+        containerClassName,
       )}
     >
       {/* Loading Skeleton - only shown if not already cached */}
@@ -163,7 +163,7 @@ export const ExamImage = memo(function ExamImage({
             maxHeightClass,
             loading ? "opacity-0" : "opacity-100",
             onZoom ? "cursor-zoom-in hover:brightness-95" : "",
-            className
+            className,
           )}
           onClick={() => onZoom && onZoom(normalizedSrc)}
         />
@@ -186,4 +186,3 @@ export const ExamImage = memo(function ExamImage({
     </div>
   );
 });
-

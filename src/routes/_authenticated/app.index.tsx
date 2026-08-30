@@ -3,7 +3,18 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Countdown } from "@/components/countdown";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Brain, CheckCircle2, ClipboardList, Flame, SkipForward, Target, TrendingUp, Trophy, XCircle } from "lucide-react";
+import {
+  ArrowRight,
+  Brain,
+  CheckCircle2,
+  ClipboardList,
+  Flame,
+  SkipForward,
+  Target,
+  TrendingUp,
+  Trophy,
+  XCircle,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   head: () => ({ meta: [{ title: "Dashboard  -  Testum" }] }),
@@ -22,7 +33,11 @@ function Dashboard() {
     (async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return;
-      const { data: p } = await supabase.from("profiles").select("full_name").eq("user_id", u.user.id).maybeSingle();
+      const { data: p } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", u.user.id)
+        .maybeSingle();
       setName(p?.full_name?.split(" ")[0] ?? "");
 
       const { data: open } = await supabase
@@ -35,12 +50,15 @@ function Dashboard() {
         .maybeSingle();
       setResume(open ?? null);
 
-
       const { data: atts } = await supabase
         .from("attempts")
-        .select("id, score, correct_count, wrong_count, unattempted_count, submitted_at, status, tests(title, total_questions, marks_correct)")
-        .eq("user_id", u.user.id).eq("status", "submitted")
-        .order("submitted_at", { ascending: false }).limit(10);
+        .select(
+          "id, score, correct_count, wrong_count, unattempted_count, submitted_at, status, tests(title, total_questions, marks_correct)",
+        )
+        .eq("user_id", u.user.id)
+        .eq("status", "submitted")
+        .order("submitted_at", { ascending: false })
+        .limit(10);
 
       const list = atts ?? [];
       if (list.length) {
@@ -57,7 +75,11 @@ function Dashboard() {
       setRecent(list.slice(0, 4));
 
       if (list[0]) {
-        const { data: an } = await supabase.from("analysis").select("ai_summary, weak_topics").eq("attempt_id", list[0].id).maybeSingle();
+        const { data: an } = await supabase
+          .from("analysis")
+          .select("ai_summary, weak_topics")
+          .eq("attempt_id", list[0].id)
+          .maybeSingle();
         setAiSummary(an?.ai_summary ?? null);
         setWeak(an?.weak_topics ?? []);
       }
@@ -68,8 +90,12 @@ function Dashboard() {
     <div className="space-y-6">
       <div className="relative rounded-3xl border bg-hero p-5 text-primary-foreground shadow-elegant sm:p-7 overflow-hidden">
         {/* Subtle background grid overlay */}
-        <div className="pointer-events-none absolute inset-0 opacity-[0.04]"
-          style={{ backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 31px,white 31px,white 32px),repeating-linear-gradient(90deg,transparent,transparent 31px,white 31px,white 32px)" }}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(0deg,transparent,transparent 31px,white 31px,white 32px),repeating-linear-gradient(90deg,transparent,transparent 31px,white 31px,white 32px)",
+          }}
         />
 
         <div className="relative flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -87,14 +113,14 @@ function Dashboard() {
             </p>
 
             <div className="mt-5">
-              <div className="mb-2 text-[10px] font-bold uppercase tracking-widest opacity-60">Time left to NEET 2027</div>
+              <div className="mb-2 text-[10px] font-bold uppercase tracking-widest opacity-60">
+                Time left to NEET 2027
+              </div>
               <Countdown dark />
             </div>
           </div>
-
         </div>
       </div>
-
 
       {resume && (
         <div className="flex flex-col gap-3 rounded-2xl border border-warning/40 bg-warning/10 p-4 sm:flex-row sm:items-center">
@@ -102,26 +128,42 @@ function Dashboard() {
             <Flame className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold">Unfinished test  -  {resume.tests?.title ?? "Mock test"}</div>
-            <div className="text-xs text-muted-foreground">Your answers are saved. Continue right where you left off.</div>
+            <div className="text-sm font-semibold">
+              Unfinished test - {resume.tests?.title ?? "Mock test"}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Your answers are saved. Continue right where you left off.
+            </div>
           </div>
           <Button asChild size="sm" className="sm:w-auto">
-            <Link to="/app/attempt/$attemptId" params={{ attemptId: resume.id }}>Resume test</Link>
+            <Link to="/app/attempt/$attemptId" params={{ attemptId: resume.id }}>
+              Resume test
+            </Link>
           </Button>
         </div>
       )}
 
-
-
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { l: "Attempted", v: stats.attempted, Icon: ClipboardList, tint: "bg-primary/10 text-primary" },
-          { l: "Avg Score", v: stats.avgScore, Icon: TrendingUp, tint: "bg-success/10 text-success" },
+          {
+            l: "Attempted",
+            v: stats.attempted,
+            Icon: ClipboardList,
+            tint: "bg-primary/10 text-primary",
+          },
+          {
+            l: "Avg Score",
+            v: stats.avgScore,
+            Icon: TrendingUp,
+            tint: "bg-success/10 text-success",
+          },
           { l: "Accuracy", v: `${stats.accuracy}%`, Icon: Target, tint: "bg-info/10 text-info" },
           { l: "Best", v: stats.best, Icon: Trophy, tint: "bg-warning/10 text-warning" },
         ].map(({ l, v, Icon, tint }) => (
           <div key={l} className="rounded-2xl border bg-card p-4">
-            <div className={`grid h-9 w-9 place-items-center rounded-xl ${tint}`}><Icon className="h-4 w-4" /></div>
+            <div className={`grid h-9 w-9 place-items-center rounded-xl ${tint}`}>
+              <Icon className="h-4 w-4" />
+            </div>
             <div className="mt-3 text-xs uppercase tracking-wide text-muted-foreground">{l}</div>
             <div className="mt-0.5 font-display text-2xl font-bold">{v}</div>
           </div>
@@ -133,13 +175,18 @@ function Dashboard() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-xl font-bold">Recent tests</h2>
             <Button asChild variant="ghost" size="sm" className="gap-1 text-primary font-semibold">
-              <Link to="/app/tests">All tests <ArrowRight className="h-3.5 w-3.5" /></Link>
+              <Link to="/app/tests">
+                All tests <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </Button>
           </div>
           <div className="space-y-3">
             {recent.length === 0 && (
               <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-                No attempts yet. <Link to="/app/tests" className="text-primary font-medium">Take your first test →</Link>
+                No attempts yet.{" "}
+                <Link to="/app/tests" className="text-primary font-medium">
+                  Take your first test →
+                </Link>
               </div>
             )}
             {recent.map((a) => {
@@ -183,9 +230,7 @@ function Dashboard() {
 
                   {/* Score */}
                   <div className="shrink-0 text-right">
-                    <span className="font-display text-xl font-black text-foreground">
-                      {score}
-                    </span>
+                    <span className="font-display text-xl font-black text-foreground">{score}</span>
                     <span className="text-xs font-semibold text-muted-foreground">/{total}</span>
                   </div>
                 </Link>
@@ -196,18 +241,28 @@ function Dashboard() {
 
         <div className="rounded-2xl border bg-card p-5">
           <div className="flex items-center gap-2">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-accent text-accent-foreground"><Brain className="h-4 w-4" /></div>
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-accent text-accent-foreground">
+              <Brain className="h-4 w-4" />
+            </div>
             <h2 className="font-display text-lg font-semibold">AI Insights</h2>
           </div>
           <p className="mt-3 text-sm text-muted-foreground">
-            {aiSummary ?? "Complete a test to unlock personalized AI feedback and weak-topic analysis."}
+            {aiSummary ??
+              "Complete a test to unlock personalized AI feedback and weak-topic analysis."}
           </p>
           {weak.length > 0 && (
             <div className="mt-3">
-              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Focus areas</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Focus areas
+              </div>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {weak.slice(0, 6).map((w) => (
-                  <span key={w} className="rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive">{w}</span>
+                  <span
+                    key={w}
+                    className="rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive"
+                  >
+                    {w}
+                  </span>
                 ))}
               </div>
             </div>
@@ -226,7 +281,11 @@ function Dashboard() {
             { t: "Part syllabus", d: "Mid-prep checkpoints", to: "/app/tests?tab=part" },
             { t: "Full syllabus", d: "180 Q · 180 min mock", to: "/app/tests?tab=full" },
           ].map((c) => (
-            <Link key={c.t} to="/app/tests" className="rounded-xl border p-4 hover:border-primary hover:shadow-elegant transition">
+            <Link
+              key={c.t}
+              to="/app/tests"
+              className="rounded-xl border p-4 hover:border-primary hover:shadow-elegant transition"
+            >
               <div className="font-display font-semibold">{c.t}</div>
               <div className="mt-0.5 text-xs text-muted-foreground">{c.d}</div>
             </Link>

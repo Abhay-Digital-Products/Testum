@@ -13,7 +13,13 @@ import {
 
 /* ─── Types ──────────────────────────────────────────── */
 type RGB = [number, number, number];
-type Stat = { total: number; correct: number; wrong: number; unattempted: number; timeSpent?: number };
+type Stat = {
+  total: number;
+  correct: number;
+  wrong: number;
+  unattempted: number;
+  timeSpent?: number;
+};
 
 export type QuestionReview = {
   order_index: number;
@@ -58,30 +64,33 @@ export type ResultPdfInput = {
 export type PdfProgressCallback = (step: string, percent: number) => void;
 
 /* ─── Brand Palette (Matches site theme exactly) ─────── */
-const PRIMARY: RGB    = [37,  99,  235]; // Royal Blue #2563EB
-const PRIMARY_L: RGB  = [79, 140, 255]; // Lighter blue for accents
-const DARK: RGB       = [15,  23,  42];  // Slate 900
-const GREY: RGB       = [100, 116, 139]; // Slate 500
-const GREY_L: RGB     = [148, 163, 184]; // Slate 400
-const LIGHT_BG: RGB   = [248, 250, 252]; // Slate 50
-const BORDER: RGB     = [226, 232, 240]; // Slate 200
+const PRIMARY: RGB = [37, 99, 235]; // Royal Blue #2563EB
+const PRIMARY_L: RGB = [79, 140, 255]; // Lighter blue for accents
+const DARK: RGB = [15, 23, 42]; // Slate 900
+const GREY: RGB = [100, 116, 139]; // Slate 500
+const GREY_L: RGB = [148, 163, 184]; // Slate 400
+const LIGHT_BG: RGB = [248, 250, 252]; // Slate 50
+const BORDER: RGB = [226, 232, 240]; // Slate 200
 
-const GREEN: RGB      = [16,  185, 129]; // Emerald 500
-const GREEN_BG: RGB   = [236, 253, 245]; // Emerald 50
-const RED: RGB        = [239, 68,  68];  // Rose 500
-const RED_BG: RGB     = [254, 242, 242]; // Rose 50
-const AMBER: RGB      = [245, 158, 11];  // Amber 500
-const AMBER_BG: RGB   = [255, 251, 235]; // Amber 50
-const INDIGO_BG: RGB  = [238, 242, 255]; // Indigo 50
-const INDIGO_BD: RGB  = [199, 210, 254]; // Indigo 200
+const GREEN: RGB = [16, 185, 129]; // Emerald 500
+const GREEN_BG: RGB = [236, 253, 245]; // Emerald 50
+const RED: RGB = [239, 68, 68]; // Rose 500
+const RED_BG: RGB = [254, 242, 242]; // Rose 50
+const AMBER: RGB = [245, 158, 11]; // Amber 500
+const AMBER_BG: RGB = [255, 251, 235]; // Amber 50
+const INDIGO_BG: RGB = [238, 242, 255]; // Indigo 50
+const INDIGO_BD: RGB = [199, 210, 254]; // Indigo 200
 
-const WHITE: RGB      = [255, 255, 255];
+const WHITE: RGB = [255, 255, 255];
 
 /* ─── High-Performance Parallel Image Loader & Cache ───────── */
 type LoadedImage = { data: string; w: number; h: number; format: string };
 const globalImageCache = new Map<string, LoadedImage>();
 
-async function fetchSingleImageWithTimeout(url: string, timeoutMs = 2400): Promise<LoadedImage | null> {
+async function fetchSingleImageWithTimeout(
+  url: string,
+  timeoutMs = 2400,
+): Promise<LoadedImage | null> {
   if (!url || typeof url !== "string") return null;
   if (globalImageCache.has(url)) return globalImageCache.get(url)!;
 
@@ -177,7 +186,7 @@ async function fetchSingleImageWithTimeout(url: string, timeoutMs = 2400): Promi
  */
 async function prefetchAllImages(
   urls: string[],
-  onProgress?: PdfProgressCallback
+  onProgress?: PdfProgressCallback,
 ): Promise<Map<string, LoadedImage>> {
   const uniqueUrls = Array.from(new Set(urls.filter((u) => Boolean(u) && typeof u === "string")));
   const results = new Map<string, LoadedImage>();
@@ -193,7 +202,7 @@ async function prefetchAllImages(
       chunk.map(async (u) => {
         const img = await fetchSingleImageWithTimeout(u);
         return { url: u, img };
-      })
+      }),
     );
     for (const item of loadedChunk) {
       if (item.img) results.set(item.url, item.img);
@@ -209,10 +218,7 @@ async function prefetchAllImages(
 }
 
 /* ─── Main PDF Generator ──────────────────────────────── */
-export async function downloadResultPdf(
-  input: ResultPdfInput,
-  onProgress?: PdfProgressCallback
-) {
+export async function downloadResultPdf(input: ResultPdfInput, onProgress?: PdfProgressCallback) {
   if (onProgress) onProgress("Preparing exam data...", 5);
 
   // 1. Collect all unique image URLs upfront (no limit cap so all questions are included)
@@ -230,12 +236,12 @@ export async function downloadResultPdf(
   }
 
   const imageMap = await prefetchAllImages(allUrls, onProgress);
-  const logo = logoAsset?.url ? imageMap.get(logoAsset.url) ?? null : null;
+  const logo = logoAsset?.url ? (imageMap.get(logoAsset.url) ?? null) : null;
 
   if (onProgress) onProgress("Generating PDF report...", 85);
 
   const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const W = doc.internal.pageSize.getWidth();  // 595.28 pt
+  const W = doc.internal.pageSize.getWidth(); // 595.28 pt
   const H = doc.internal.pageSize.getHeight(); // 841.89 pt
   const M = 36; // Margins
   let y = 0;
@@ -274,7 +280,11 @@ export async function downloadResultPdf(
 
   // Logo
   if (logo) {
-    try { doc.addImage(logo.data, logo.format || "PNG", M, 17, 50, 50); } catch { /* ignore */ }
+    try {
+      doc.addImage(logo.data, logo.format || "PNG", M, 17, 50, 50);
+    } catch {
+      /* ignore */
+    }
   }
 
   const txtX = M + (logo ? 62 : 0);
@@ -290,7 +300,16 @@ export async function downloadResultPdf(
 
   doc.setFontSize(7.5);
   doc.setTextColor(185, 210, 255);
-  doc.text("Generated: " + new Date(input.submittedAt || Date.now()).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }), W - M, 42, { align: "right" });
+  doc.text(
+    "Generated: " +
+      new Date(input.submittedAt || Date.now()).toLocaleString("en-IN", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }),
+    W - M,
+    42,
+    { align: "right" },
+  );
   doc.text("testum.in  ·  NEET CBT Exam Simulation", W - M, 56, { align: "right" });
 
   y = 104;
@@ -315,7 +334,10 @@ export async function downloadResultPdf(
   const studentLine = `Student: ${input.studentName}${input.studentClass ? `   |   Class: ${input.studentClass}` : ""}   |   Duration: ${input.durationMinutes} min`;
   doc.text(studentLine, M + 16, y + 34);
 
-  const submittedDate = new Date(input.submittedAt || Date.now()).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+  const submittedDate = new Date(input.submittedAt || Date.now()).toLocaleString("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
   doc.text("Submitted: " + submittedDate, M + 16, y + 46);
 
   y += 65;
@@ -356,14 +378,38 @@ export async function downloadResultPdf(
 
   const attempted = finalCorrect + finalWrong;
   const accuracy = attempted ? Math.round((finalCorrect / attempted) * 100) : 0;
-  const percent   = input.totalMax ? Math.round((finalScore / input.totalMax) * 100) : 0;
-  const minSpent  = Math.floor(input.timeSpentSeconds / 60);
+  const percent = input.totalMax ? Math.round((finalScore / input.totalMax) * 100) : 0;
+  const minSpent = Math.floor(input.timeSpentSeconds / 60);
 
   const metrics: Array<{ label: string; value: string; sub: string; color: RGB; accentBg: RGB }> = [
-    { label: "FINAL SCORE",      value: `${Math.round(finalScore)}/${input.totalMax}`, sub: `${percent}% of maximum`,           color: PRIMARY, accentBg: INDIGO_BG },
-    { label: "ACCURACY RATE",    value: `${accuracy}%`,                                 sub: `${finalCorrect}/${attempted} correct`, color: accuracy >= 75 ? GREEN : accuracy >= 50 ? AMBER : RED, accentBg: accuracy >= 75 ? GREEN_BG : accuracy >= 50 ? AMBER_BG : RED_BG },
-    { label: "TIME USED",        value: `${minSpent} min`,                               sub: `of ${input.durationMinutes} min`,   color: DARK, accentBg: LIGHT_BG },
-    { label: "ATTEMPT RATIO",    value: `${attempted}/${attempted + finalUnattempted}`, sub: `${finalUnattempted} skipped`,      color: DARK, accentBg: LIGHT_BG },
+    {
+      label: "FINAL SCORE",
+      value: `${Math.round(finalScore)}/${input.totalMax}`,
+      sub: `${percent}% of maximum`,
+      color: PRIMARY,
+      accentBg: INDIGO_BG,
+    },
+    {
+      label: "ACCURACY RATE",
+      value: `${accuracy}%`,
+      sub: `${finalCorrect}/${attempted} correct`,
+      color: accuracy >= 75 ? GREEN : accuracy >= 50 ? AMBER : RED,
+      accentBg: accuracy >= 75 ? GREEN_BG : accuracy >= 50 ? AMBER_BG : RED_BG,
+    },
+    {
+      label: "TIME USED",
+      value: `${minSpent} min`,
+      sub: `of ${input.durationMinutes} min`,
+      color: DARK,
+      accentBg: LIGHT_BG,
+    },
+    {
+      label: "ATTEMPT RATIO",
+      value: `${attempted}/${attempted + finalUnattempted}`,
+      sub: `${finalUnattempted} skipped`,
+      color: DARK,
+      accentBg: LIGHT_BG,
+    },
   ];
 
   const mw = (W - M * 2 - 15) / 4;
@@ -397,9 +443,30 @@ export async function downloadResultPdf(
   /* ── 4. ANSWER BREAKDOWN ROW ────────────────────────── */
   const bw = (W - M * 2 - 10) / 3;
   const breakdown = [
-    { label: "CORRECT ANSWERS",  count: finalCorrect,     score: `+${finalCorrect * marksCorrect} Marks`,   color: GREEN, bg: GREEN_BG, border: GREEN },
-    { label: "INCORRECT ANSWERS", count: finalWrong,       score: `${finalWrong * marksWrong < 0 ? "" : "+"}${finalWrong * marksWrong} Marks`, color: RED,   bg: RED_BG,   border: RED },
-    { label: "SKIPPED / UNATTEMPTED", count: finalUnattempted, score: "0 Marks",                        color: GREY,  bg: LIGHT_BG, border: BORDER },
+    {
+      label: "CORRECT ANSWERS",
+      count: finalCorrect,
+      score: `+${finalCorrect * marksCorrect} Marks`,
+      color: GREEN,
+      bg: GREEN_BG,
+      border: GREEN,
+    },
+    {
+      label: "INCORRECT ANSWERS",
+      count: finalWrong,
+      score: `${finalWrong * marksWrong < 0 ? "" : "+"}${finalWrong * marksWrong} Marks`,
+      color: RED,
+      bg: RED_BG,
+      border: RED,
+    },
+    {
+      label: "SKIPPED / UNATTEMPTED",
+      count: finalUnattempted,
+      score: "0 Marks",
+      color: GREY,
+      bg: LIGHT_BG,
+      border: BORDER,
+    },
   ];
 
   breakdown.forEach((b, i) => {
@@ -455,7 +522,14 @@ export async function downloadResultPdf(
   };
 
   /* ── Helper: Progress bar ───────────────────────────── */
-  const progressBar = (x: number, barY: number, barW: number, val: number, total: number, color: RGB) => {
+  const progressBar = (
+    x: number,
+    barY: number,
+    barW: number,
+    val: number,
+    total: number,
+    color: RGB,
+  ) => {
     const pct = total ? Math.min(1, Math.max(0, val / total)) : 0;
     doc.setFillColor(...BORDER);
     doc.roundedRect(x, barY, barW, 5, 2.5, 2.5, "F");
@@ -499,7 +573,7 @@ export async function downloadResultPdf(
     }
 
     // Weak / Strong Topics
-    const weakList   = input.weakTopics  ?? [];
+    const weakList = input.weakTopics ?? [];
     const strongList = input.strongTopics ?? [];
 
     if (weakList.length > 0 || strongList.length > 0) {
@@ -565,12 +639,12 @@ export async function downloadResultPdf(
     heading("Subject-wise Performance Breakdown");
 
     const COLS = {
-      name:  M + 10,
-      bar:   M + 130,
-      c:     W - M - 145,
-      w:     W - M - 105,
-      s:     W - M - 65,
-      acc:   W - M - 10,
+      name: M + 10,
+      bar: M + 130,
+      c: W - M - 145,
+      w: W - M - 105,
+      s: W - M - 65,
+      acc: W - M - 10,
     };
     const barW = COLS.c - COLS.bar - 8;
 
@@ -583,12 +657,12 @@ export async function downloadResultPdf(
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7.5);
     doc.setTextColor(...GREY);
-    doc.text("SUBJECT",   COLS.name, y + 5);
-    doc.text("ACCURACY",  COLS.bar,  y + 5);
-    doc.text("✓",         COLS.c,    y + 5);
-    doc.text("✗",         COLS.w,    y + 5);
-    doc.text("—",         COLS.s,    y + 5);
-    doc.text("%",         COLS.acc,  y + 5, { align: "right" });
+    doc.text("SUBJECT", COLS.name, y + 5);
+    doc.text("ACCURACY", COLS.bar, y + 5);
+    doc.text("✓", COLS.c, y + 5);
+    doc.text("✗", COLS.w, y + 5);
+    doc.text("—", COLS.s, y + 5);
+    doc.text("%", COLS.acc, y + 5, { align: "right" });
     y += 19;
 
     for (const [name, s] of subjectEntries) {
@@ -602,13 +676,16 @@ export async function downloadResultPdf(
       doc.setTextColor(...DARK);
       doc.text(name.charAt(0).toUpperCase() + name.slice(1), COLS.name, y + 4);
 
-      progressBar(COLS.bar, y - 2, barW, s.correct, s.total || (att + s.unattempted), barColor);
+      progressBar(COLS.bar, y - 2, barW, s.correct, s.total || att + s.unattempted, barColor);
 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8.5);
-      doc.setTextColor(...GREEN);  doc.text(String(s.correct),    COLS.c, y + 4);
-      doc.setTextColor(...RED);    doc.text(String(s.wrong),      COLS.w, y + 4);
-      doc.setTextColor(...GREY);   doc.text(String(s.unattempted),COLS.s, y + 4);
+      doc.setTextColor(...GREEN);
+      doc.text(String(s.correct), COLS.c, y + 4);
+      doc.setTextColor(...RED);
+      doc.text(String(s.wrong), COLS.w, y + 4);
+      doc.setTextColor(...GREY);
+      doc.text(String(s.unattempted), COLS.s, y + 4);
 
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...barColor);
@@ -637,9 +714,9 @@ export async function downloadResultPdf(
     doc.setFontSize(7.5);
     doc.setTextColor(...GREY);
     doc.text("CHAPTER / TOPIC", COLS.name, y + 5);
-    doc.text("✓",   COLS.c,   y + 5);
-    doc.text("✗",   COLS.w,   y + 5);
-    doc.text("—",   COLS.s,   y + 5);
+    doc.text("✓", COLS.c, y + 5);
+    doc.text("✗", COLS.w, y + 5);
+    doc.text("—", COLS.s, y + 5);
     doc.text("ACC", COLS.acc, y + 5, { align: "right" });
     y += 19;
 
@@ -654,9 +731,12 @@ export async function downloadResultPdf(
       doc.setTextColor(...DARK);
       doc.text(doc.splitTextToSize(name, 200)[0], COLS.name, y + 4);
 
-      doc.setTextColor(...GREEN);  doc.text(String(s.correct),    COLS.c,   y + 4);
-      doc.setTextColor(...RED);    doc.text(String(s.wrong),      COLS.w,   y + 4);
-      doc.setTextColor(...GREY);   doc.text(String(s.unattempted),COLS.s,   y + 4);
+      doc.setTextColor(...GREEN);
+      doc.text(String(s.correct), COLS.c, y + 4);
+      doc.setTextColor(...RED);
+      doc.text(String(s.wrong), COLS.w, y + 4);
+      doc.setTextColor(...GREY);
+      doc.text(String(s.unattempted), COLS.s, y + 4);
 
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...barColor);
@@ -678,21 +758,29 @@ export async function downloadResultPdf(
 
     doc.setFontSize(8);
     doc.setTextColor(...GREY);
-    paragraph(`Complete review of all ${qs.length} questions including question diagrams, your response, verified correct answer, and step-by-step solutions.`);
+    paragraph(
+      `Complete review of all ${qs.length} questions including question diagrams, your response, verified correct answer, and step-by-step solutions.`,
+    );
 
     for (let qIdx = 0; qIdx < qs.length; qIdx++) {
       const q = qs[qIdx];
       const selected = normalizeOptionKey(q.selected_option);
       const correctOpt = normalizeCorrectOption(q.correct_option) ?? "";
       const hasAttempted = hasAttemptedAnswer(q);
-      const isSkipped  = !hasAttempted;
-      const isCorrect  = hasAttempted && (q.is_correct === true || isAnswerCorrect(selected, correctOpt));
-      const isWrong    = hasAttempted && !isCorrect;
+      const isSkipped = !hasAttempted;
+      const isCorrect =
+        hasAttempted && (q.is_correct === true || isAnswerCorrect(selected, correctOpt));
+      const isWrong = hasAttempted && !isCorrect;
       const statusColor: RGB = isCorrect ? GREEN : isWrong ? RED : GREY;
-      const statusLabel      = isCorrect ? `CORRECT (+${marksCorrect})` : isWrong ? `WRONG (${marksWrong})` : "NOT ATTEMPTED (0)";
-      const timeStr          = q.time_spent_seconds && q.time_spent_seconds > 0
-        ? `${Math.floor(q.time_spent_seconds / 60)}m ${q.time_spent_seconds % 60}s`
-        : "—";
+      const statusLabel = isCorrect
+        ? `CORRECT (+${marksCorrect})`
+        : isWrong
+          ? `WRONG (${marksWrong})`
+          : "NOT ATTEMPTED (0)";
+      const timeStr =
+        q.time_spent_seconds && q.time_spent_seconds > 0
+          ? `${Math.floor(q.time_spent_seconds / 60)}m ${q.time_spent_seconds % 60}s`
+          : "—";
 
       ensure(90);
 
@@ -746,9 +834,9 @@ export async function downloadResultPdf(
         if (img) {
           const maxW = W - M * 2;
           const scale = maxW / img.w;
-          const rawH  = img.h * scale;
-          const capH  = Math.min(rawH, 280);
-          const capW  = rawH > 280 ? (img.w / img.h) * capH : maxW;
+          const rawH = img.h * scale;
+          const capH = Math.min(rawH, 280);
+          const capW = rawH > 280 ? (img.w / img.h) * capH : maxW;
           ensure(capH + 14);
           try {
             doc.addImage(img.data, img.format || "JPEG", M, y, capW, capH);
@@ -776,13 +864,13 @@ export async function downloadResultPdf(
         for (const opt of optionsList) {
           const optKey = normalizeOptionKey(opt.key) ?? "";
           const isOptCorrect = isOptionSelected(correctOpt, optKey);
-          const isOptChosen  = isOptionSelected(selected, optKey);
+          const isOptChosen = isOptionSelected(selected, optKey);
           const isWrongChoice = isOptChosen && !isOptCorrect;
 
-          let bg: RGB | null  = null;
-          let bd: RGB         = BORDER;
-          let tc: RGB         = DARK;
-          let suffix          = "";
+          let bg: RGB | null = null;
+          let bd: RGB = BORDER;
+          let tc: RGB = DARK;
+          let suffix = "";
 
           if (isOptCorrect && isOptChosen) {
             bg = GREEN_BG;
@@ -801,9 +889,9 @@ export async function downloadResultPdf(
             suffix = "  ✗  Your Selected Answer  (Incorrect)";
           }
 
-          const label  = `  (${opt.key})  ${opt.text}${suffix}`;
-          const lines  = doc.splitTextToSize(label, W - M * 2 - 20);
-          const rowH   = lines.length * 12 + 12;
+          const label = `  (${opt.key})  ${opt.text}${suffix}`;
+          const lines = doc.splitTextToSize(label, W - M * 2 - 20);
+          const rowH = lines.length * 12 + 12;
 
           ensure(rowH + 4);
           if (bg) {
@@ -852,9 +940,9 @@ export async function downloadResultPdf(
       else if (isWrong) summaryParts.push(`Verdict: INCORRECT (${marksWrong})`);
       else summaryParts.push("Verdict: NOT ATTEMPTED (0)");
 
-      const summaryBg: RGB   = isCorrect ? GREEN_BG  : isWrong ? RED_BG    : LIGHT_BG;
-      const summaryBd: RGB   = isCorrect ? GREEN      : isWrong ? RED        : BORDER;
-      const summaryTc: RGB   = isCorrect ? GREEN      : isWrong ? RED        : GREY;
+      const summaryBg: RGB = isCorrect ? GREEN_BG : isWrong ? RED_BG : LIGHT_BG;
+      const summaryBd: RGB = isCorrect ? GREEN : isWrong ? RED : BORDER;
+      const summaryTc: RGB = isCorrect ? GREEN : isWrong ? RED : GREY;
       doc.setFillColor(...summaryBg);
       doc.setDrawColor(...summaryBd);
       doc.roundedRect(M, y - 5, W - M * 2, 20, 5, 5, "FD");
@@ -889,8 +977,8 @@ export async function downloadResultPdf(
         if (q.solution_image_url) {
           const sImg = imageMap.get(q.solution_image_url);
           if (sImg) {
-            const sw  = Math.min(W - M * 2 - 8, 360);
-            const sh  = Math.min((sImg.h / sImg.w) * sw, 240);
+            const sw = Math.min(W - M * 2 - 8, 360);
+            const sh = Math.min((sImg.h / sImg.w) * sw, 240);
             const fsw = sh < (sImg.h / sImg.w) * sw ? (sImg.w / sImg.h) * sh : sw;
             ensure(sh + 14);
             try {
@@ -907,7 +995,9 @@ export async function downloadResultPdf(
           doc.setFont("helvetica", "bold");
           doc.setFontSize(8);
           doc.setTextColor(...PRIMARY);
-          doc.textWithLink("▶  Watch Video Solution Online", M + 10, y, { url: q.solution_video_url });
+          doc.textWithLink("▶  Watch Video Solution Online", M + 10, y, {
+            url: q.solution_video_url,
+          });
           y += 16;
         }
       }

@@ -5,18 +5,47 @@ import { useEntitlements, type PlanCode } from "@/hooks/use-entitlements";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { TestListSkeleton } from "@/components/skeleton-loaders";
 import {
-  Search, Clock, ListChecks, Play, Atom, TestTube2, Sprout, Trophy,
-  CheckCircle2, Lock, Crown, Layers, BookOpen, Calendar, Gift, Puzzle, FileText, ExternalLink, Download, Sparkles
+  Search,
+  Clock,
+  ListChecks,
+  Play,
+  Atom,
+  TestTube2,
+  Sprout,
+  Trophy,
+  CheckCircle2,
+  Lock,
+  Crown,
+  Layers,
+  BookOpen,
+  Calendar,
+  Gift,
+  Puzzle,
+  FileText,
+  ExternalLink,
+  Download,
+  Sparkles,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/tests/")({
   head: () => ({
     meta: [
       { title: "Test Series - Testum" },
-      { name: "description", content: "Browse free tests, chapter-wise, part and full syllabus NEET CBT tests on Testum." },
+      {
+        name: "description",
+        content:
+          "Browse free tests, chapter-wise, part and full syllabus NEET CBT tests on Testum.",
+      },
     ],
   }),
   validateSearch: (search: Record<string, unknown>): { tab?: string } => {
@@ -36,15 +65,18 @@ const subjectIcon = (s: string) => {
 const TAB_CONFIG = {
   free: {
     title: "100% Free Practice Tests",
-    description: "Standalone practice tests with real NTA exam interface, countdown timer, question palette & instant performance scorecards.",
+    description:
+      "Standalone practice tests with real NTA exam interface, countdown timer, question palette & instant performance scorecards.",
     icon: Gift,
-    gradient: "from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 text-emerald-700",
+    gradient:
+      "from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 text-emerald-700",
     badge: "Standalone Free",
     badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-300",
   },
   chapter: {
     title: "Chapter-Wise Targeted Series",
-    description: "Master each NCERT chapter individually with focused questions, PYQ patterns, and instant solutions.",
+    description:
+      "Master each NCERT chapter individually with focused questions, PYQ patterns, and instant solutions.",
     icon: BookOpen,
     gradient: "from-blue-500/10 via-blue-500/5 to-transparent border-blue-500/20 text-blue-700",
     badge: "Chapter Plan",
@@ -52,7 +84,8 @@ const TAB_CONFIG = {
   },
   part: {
     title: "Part Syllabus Checkpoints",
-    description: "Combined multi-chapter and class-level checkpoints to track progressive syllabus mastery.",
+    description:
+      "Combined multi-chapter and class-level checkpoints to track progressive syllabus mastery.",
     icon: Puzzle,
     gradient: "from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/20 text-amber-700",
     badge: "Part Plan",
@@ -60,9 +93,11 @@ const TAB_CONFIG = {
   },
   full: {
     title: "Full-Length Mock Series",
-    description: "Complete 180 Questions, 720 Marks full syllabus simulations under authentic exam pressure.",
+    description:
+      "Complete 180 Questions, 720 Marks full syllabus simulations under authentic exam pressure.",
     icon: Trophy,
-    gradient: "from-purple-500/10 via-purple-500/5 to-transparent border-purple-500/20 text-purple-700",
+    gradient:
+      "from-purple-500/10 via-purple-500/5 to-transparent border-purple-500/20 text-purple-700",
     badge: "Full Mock Plan",
     badgeColor: "bg-purple-100 text-purple-800 border-purple-300",
   },
@@ -75,7 +110,9 @@ function Tests() {
   const [attemptedIds, setAttemptedIds] = useState<Set<string>>(new Set());
   const [plannerModalSeries, setPlannerModalSeries] = useState<any | null>(null);
   const [q, setQ] = useState("");
-  const [tab, setTab] = useState<"free" | "chapter" | "part" | "full">((search.tab as any) || "free");
+  const [tab, setTab] = useState<"free" | "chapter" | "part" | "full">(
+    (search.tab as any) || "free",
+  );
   const [dataLoading, setDataLoading] = useState(true);
   const { hasAccess, loading: entLoading } = useEntitlements();
 
@@ -85,7 +122,9 @@ function Tests() {
       const [{ data: testData }, { data: seriesData }] = await Promise.all([
         supabase
           .from("tests")
-          .select("id, title, duration_minutes, total_questions, marks_correct, marks_wrong, opens_at, syllabus, is_free, subject_scope, series_id, test_series(id, kind, subject, title, plan_code, planner_pdf_url)")
+          .select(
+            "id, title, duration_minutes, total_questions, marks_correct, marks_wrong, opens_at, syllabus, is_free, subject_scope, series_id, test_series(id, kind, subject, title, plan_code, planner_pdf_url)",
+          )
           .order("created_at", { ascending: false }),
         supabase
           .from("test_series")
@@ -97,7 +136,11 @@ function Tests() {
 
       const { data: u } = await supabase.auth.getUser();
       if (u.user) {
-        const { data: att } = await supabase.from("attempts").select("test_id, status").eq("user_id", u.user.id).eq("status", "submitted");
+        const { data: att } = await supabase
+          .from("attempts")
+          .select("test_id, status")
+          .eq("user_id", u.user.id)
+          .eq("status", "submitted");
         setAttemptedIds(new Set((att ?? []).map((a: any) => a.test_id)));
       }
       setDataLoading(false);
@@ -116,7 +159,11 @@ function Tests() {
     if (kind === "part" || kind === "full" || kind === "chapter") {
       return false;
     }
-    return Boolean(t.is_free) || t.test_series?.plan_code === "free" || (t.test_series?.title ?? "").toLowerCase().includes("free");
+    return (
+      Boolean(t.is_free) ||
+      t.test_series?.plan_code === "free" ||
+      (t.test_series?.title ?? "").toLowerCase().includes("free")
+    );
   };
 
   // Helper to check if a test is free to attempt (either standalone free test, or free demo test in a series)
@@ -167,13 +214,23 @@ function Tests() {
   const tabSeries = useMemo(() => {
     if (tab === "free") {
       // ONLY return dedicated standalone free series; never return part/full/chapter series and never fallback to allSeries
-      return allSeries.filter((s) => (s.plan_code === "free" || s.title?.toLowerCase().includes("free")) && s.kind !== "chapter" && s.kind !== "part" && s.kind !== "full");
+      return allSeries.filter(
+        (s) =>
+          (s.plan_code === "free" || s.title?.toLowerCase().includes("free")) &&
+          s.kind !== "chapter" &&
+          s.kind !== "part" &&
+          s.kind !== "full",
+      );
     }
     return allSeries.filter((s) => s.kind === tab);
   }, [allSeries, tab]);
 
   const availablePlanners = useMemo(() => {
-    return tabSeries.filter((s) => Boolean(s.planner_pdf_url && typeof s.planner_pdf_url === "string" && s.planner_pdf_url.trim()));
+    return tabSeries.filter((s) =>
+      Boolean(
+        s.planner_pdf_url && typeof s.planner_pdf_url === "string" && s.planner_pdf_url.trim(),
+      ),
+    );
   }, [tabSeries]);
 
   const activeConf = TAB_CONFIG[tab] || TAB_CONFIG.free;
@@ -184,13 +241,22 @@ function Tests() {
       {/* Top Header */}
       <div className="flex items-center justify-between gap-3 min-w-0">
         <div className="min-w-0">
-          <h1 className="font-display text-xl font-black sm:text-2xl lg:text-3xl tracking-tight text-foreground truncate">Test Series</h1>
+          <h1 className="font-display text-xl font-black sm:text-2xl lg:text-3xl tracking-tight text-foreground truncate">
+            Test Series
+          </h1>
           <p className="mt-0.5 text-xs sm:text-sm text-muted-foreground truncate">
             Select your category to begin practicing.
           </p>
         </div>
-        <Button asChild variant="outline" size="sm" className="rounded-xl border-primary/30 text-primary hover:bg-primary/5 font-semibold text-xs shrink-0 h-8 sm:h-9 px-3">
-          <Link to="/app/pricing"><Crown className="mr-1.5 h-3.5 w-3.5 text-primary" /> Unlock Plans</Link>
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="rounded-xl border-primary/30 text-primary hover:bg-primary/5 font-semibold text-xs shrink-0 h-8 sm:h-9 px-3"
+        >
+          <Link to="/app/pricing">
+            <Crown className="mr-1.5 h-3.5 w-3.5 text-primary" /> Unlock Plans
+          </Link>
         </Button>
       </div>
 
@@ -217,12 +283,14 @@ function Tests() {
       <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full min-w-0">
         <div className="w-full rounded-2xl sm:rounded-full border border-blue-200/90 dark:border-blue-900/60 bg-white/95 dark:bg-card/95 p-1 sm:p-1.5 shadow-sm overflow-hidden">
           <div className="flex sm:grid sm:grid-cols-4 items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth">
-            {([
-              { key: "free",    label: "Free",    icon: Gift,     count: counts.free },
-              { key: "chapter", label: "Chapter", icon: BookOpen, count: counts.chapter },
-              { key: "part",    label: "Part",    icon: Puzzle,   count: counts.part },
-              { key: "full",    label: "Full",    icon: Trophy,   count: counts.full },
-            ] as const).map(({ key, label, icon: Icon, count }) => {
+            {(
+              [
+                { key: "free", label: "Free", icon: Gift, count: counts.free },
+                { key: "chapter", label: "Chapter", icon: BookOpen, count: counts.chapter },
+                { key: "part", label: "Part", icon: Puzzle, count: counts.part },
+                { key: "full", label: "Full", icon: Trophy, count: counts.full },
+              ] as const
+            ).map(({ key, label, icon: Icon, count }) => {
               const isActive = tab === key;
               return (
                 <button
@@ -247,7 +315,9 @@ function Tests() {
                   </div>
 
                   {/* Label */}
-                  <span className="text-xs sm:text-sm tracking-tight whitespace-nowrap">{label}</span>
+                  <span className="text-xs sm:text-sm tracking-tight whitespace-nowrap">
+                    {label}
+                  </span>
 
                   {/* Count Pill Badge */}
                   <span
@@ -266,7 +336,12 @@ function Tests() {
         </div>
 
         {/* Dynamic Category Hero Banner with Planner Action */}
-        <div className={"mt-3 rounded-2xl border bg-gradient-to-r p-3.5 sm:p-4.5 transition-all duration-300 min-w-0 overflow-hidden " + activeConf.gradient}>
+        <div
+          className={
+            "mt-3 rounded-2xl border bg-gradient-to-r p-3.5 sm:p-4.5 transition-all duration-300 min-w-0 overflow-hidden " +
+            activeConf.gradient
+          }
+        >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-card border shadow-xs">
@@ -274,8 +349,15 @@ function Tests() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="font-display text-sm sm:text-base font-bold text-foreground truncate">{activeConf.title}</h2>
-                  <span className={"rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border shrink-0 " + activeConf.badgeColor}>
+                  <h2 className="font-display text-sm sm:text-base font-bold text-foreground truncate">
+                    {activeConf.title}
+                  </h2>
+                  <span
+                    className={
+                      "rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border shrink-0 " +
+                      activeConf.badgeColor
+                    }
+                  >
                     {filtered.length} tests
                   </span>
                 </div>
@@ -299,7 +381,11 @@ function Tests() {
                   >
                     <a href={p.planner_pdf_url} target="_blank" rel="noopener noreferrer">
                       <FileText className="h-3.5 w-3.5 text-primary" />
-                      <span>{availablePlanners.length === 1 ? "📅 View Planner (PDF)" : `📅 Planner: ${p.title.slice(0, 16)}…`}</span>
+                      <span>
+                        {availablePlanners.length === 1
+                          ? "📅 View Planner (PDF)"
+                          : `📅 Planner: ${p.title.slice(0, 16)}…`}
+                      </span>
                       <ExternalLink className="h-3 w-3 opacity-60 ml-0.5" />
                     </a>
                   </Button>
@@ -326,7 +412,9 @@ function Tests() {
                     </div>
                     <div>
                       <h3 className="text-xs sm:text-sm font-bold text-foreground">
-                        {k === "free" ? "Test Series Schedules & Planners" : `${activeConf.title} · Planners`}
+                        {k === "free"
+                          ? "Test Series Schedules & Planners"
+                          : `${activeConf.title} · Planners`}
                       </h3>
                       <p className="text-[11px] text-muted-foreground hidden sm:block">
                         Download syllabus blueprints & chapter schedules for each test series.
@@ -342,7 +430,11 @@ function Tests() {
                   {tabSeries.map((s) => {
                     const isFreeSeries = s.plan_code === "free" || !s.plan_code;
                     const SubjIcon = subjectIcon(s.subject);
-                    const hasPdf = Boolean(s.planner_pdf_url && typeof s.planner_pdf_url === "string" && s.planner_pdf_url.trim());
+                    const hasPdf = Boolean(
+                      s.planner_pdf_url &&
+                      typeof s.planner_pdf_url === "string" &&
+                      s.planner_pdf_url.trim(),
+                    );
 
                     return (
                       <div
@@ -360,16 +452,23 @@ function Tests() {
                             <div className="mt-0.5 flex items-center gap-1 text-[10px] sm:text-[11px] text-muted-foreground capitalize">
                               <span className="font-semibold text-primary">{s.subject}</span>
                               <span>·</span>
-                              <span className="truncate">{isFreeSeries ? "Free Series" : `${s.kind} Syllabus`}</span>
+                              <span className="truncate">
+                                {isFreeSeries ? "Free Series" : `${s.kind} Syllabus`}
+                              </span>
                             </div>
                           </div>
                         </div>
 
                         {/* Planner Action */}
                         <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-2">
-                          <span className={"inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase " + (
-                            hasPdf ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border border-purple-200 dark:border-purple-800" : "bg-muted text-muted-foreground border border-border/60"
-                          )}>
+                          <span
+                            className={
+                              "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase " +
+                              (hasPdf
+                                ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+                                : "bg-muted text-muted-foreground border border-border/60")
+                            }
+                          >
                             {hasPdf ? "PDF Ready" : "Schedule"}
                           </span>
 
@@ -416,66 +515,117 @@ function Tests() {
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
                   </span>
                 </div>
-                <h3 className="mt-4 font-display font-bold text-base text-foreground">No tests found</h3>
+                <h3 className="mt-4 font-display font-bold text-base text-foreground">
+                  No tests found
+                </h3>
                 <p className="mt-1 text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
-                  {q ? (`No tests matched "${q}". Try clearing your search term.`) : (`No ${activeConf.title.toLowerCase()} added yet. Switch to another tab or check back soon.`)}
+                  {q
+                    ? `No tests matched "${q}". Try clearing your search term.`
+                    : `No ${activeConf.title.toLowerCase()} added yet. Switch to another tab or check back soon.`}
                 </p>
                 {q ? (
-                  <Button variant="outline" size="sm" onClick={() => setQ("")} className="mt-4 rounded-xl text-xs cursor-pointer">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQ("")}
+                    className="mt-4 rounded-xl text-xs cursor-pointer"
+                  >
                     Clear Search
                   </Button>
                 ) : tab === "free" ? (
                   <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
-                    <Button asChild variant="outline" size="sm" className="rounded-xl text-xs cursor-pointer">
-                      <Link to="/app/tests" search={{ tab: "part" }}>Explore Part Syllabus Tests</Link>
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="rounded-xl text-xs cursor-pointer"
+                    >
+                      <Link to="/app/tests" search={{ tab: "part" }}>
+                        Explore Part Syllabus Tests
+                      </Link>
                     </Button>
-                    <Button asChild variant="outline" size="sm" className="rounded-xl text-xs cursor-pointer">
-                      <Link to="/app/tests" search={{ tab: "chapter" }}>Explore Chapter Tests</Link>
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="rounded-xl text-xs cursor-pointer"
+                    >
+                      <Link to="/app/tests" search={{ tab: "chapter" }}>
+                        Explore Chapter Tests
+                      </Link>
                     </Button>
-                    <Button asChild variant="outline" size="sm" className="rounded-xl text-xs cursor-pointer">
-                      <Link to="/app/tests" search={{ tab: "full" }}>Explore Full Mocks</Link>
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="rounded-xl text-xs cursor-pointer"
+                    >
+                      <Link to="/app/tests" search={{ tab: "full" }}>
+                        Explore Full Mocks
+                      </Link>
                     </Button>
                   </div>
                 ) : (
-                  <Button asChild variant="outline" size="sm" className="mt-4 rounded-xl text-xs cursor-pointer">
-                    <Link to="/app/tests" search={{ tab: "free" }}>View Free Tests</Link>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="mt-4 rounded-xl text-xs cursor-pointer"
+                  >
+                    <Link to="/app/tests" search={{ tab: "free" }}>
+                      View Free Tests
+                    </Link>
                   </Button>
                 )}
               </div>
             ) : (
               <div className="grid gap-3 min-w-0">
                 {filtered.map((t, index) => {
-                  const subj = t.test_series?.subject ?? (Array.isArray(t.subject_scope) && t.subject_scope.length === 1 ? t.subject_scope[0] : "mixed");
+                  const subj =
+                    t.test_series?.subject ??
+                    (Array.isArray(t.subject_scope) && t.subject_scope.length === 1
+                      ? t.subject_scope[0]
+                      : "mixed");
                   const Icon = subjectIcon(subj);
                   const done = attemptedIds.has(t.id);
                   const isFreeTest = checkIsTestFreeToAttempt(t);
                   const isStandalone = isStandaloneFreeTest(t);
-                  const plan = (isFreeTest || isStandalone) ? null : ((t.test_series?.plan_code ?? t.test_series?.kind ?? null) as PlanCode | null);
-                  const unlocked = isFreeTest || isStandalone || (!entLoading && hasAccess(plan, isFreeTest));
+                  const plan =
+                    isFreeTest || isStandalone
+                      ? null
+                      : ((t.test_series?.plan_code ??
+                          t.test_series?.kind ??
+                          null) as PlanCode | null);
+                  const unlocked =
+                    isFreeTest || isStandalone || (!entLoading && hasAccess(plan, isFreeTest));
                   const totalMarks = (t.total_questions || 180) * (t.marks_correct || 4);
 
                   return (
                     <div
                       key={t.id}
                       style={{ animationDelay: `${index * 35}ms` }}
-                      className={"group relative rounded-2xl border bg-card p-3.5 sm:p-5 transition-all duration-200 hover:shadow-md animate-in fade-in-50 slide-in-from-bottom-2 fill-mode-both min-w-0 overflow-hidden " + (
-                        isStandalone || isFreeTest
+                      className={
+                        "group relative rounded-2xl border bg-card p-3.5 sm:p-5 transition-all duration-200 hover:shadow-md animate-in fade-in-50 slide-in-from-bottom-2 fill-mode-both min-w-0 overflow-hidden " +
+                        (isStandalone || isFreeTest
                           ? "border-emerald-500/30 hover:border-emerald-500/60"
                           : unlocked
-                          ? "hover:border-primary/40"
-                          : "opacity-90"
-                      )}
+                            ? "hover:border-primary/40"
+                            : "opacity-90")
+                      }
                     >
                       {/* Top Row: Icon + Info + Badge */}
                       <div className="flex items-start gap-3 min-w-0">
                         {/* Subject Icon */}
-                        <div className={"grid h-10 w-10 sm:h-11 sm:w-11 shrink-0 place-items-center rounded-xl " + (
-                          isStandalone || isFreeTest
-                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                            : unlocked
-                            ? "bg-primary/10 text-primary"
-                            : "bg-secondary text-muted-foreground"
-                        )}>
+                        <div
+                          className={
+                            "grid h-10 w-10 sm:h-11 sm:w-11 shrink-0 place-items-center rounded-xl " +
+                            (isStandalone || isFreeTest
+                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                              : unlocked
+                                ? "bg-primary/10 text-primary"
+                                : "bg-secondary text-muted-foreground")
+                          }
+                        >
                           <Icon className="h-5 w-5" />
                         </div>
 
@@ -493,7 +643,10 @@ function Tests() {
                                 </span>
                                 <span>·</span>
                                 <span className="capitalize font-semibold text-primary shrink-0">
-                                  {t.test_series?.subject ?? (Array.isArray(t.subject_scope) && t.subject_scope.length > 0 ? t.subject_scope.join(", ") : "All Subjects")}
+                                  {t.test_series?.subject ??
+                                    (Array.isArray(t.subject_scope) && t.subject_scope.length > 0
+                                      ? t.subject_scope.join(", ")
+                                      : "All Subjects")}
                                 </span>
                                 {t.test_series?.planner_pdf_url ? (
                                   <>
@@ -529,18 +682,29 @@ function Tests() {
                             </div>
 
                             {/* Status badge */}
-                            <span className={"shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider " + (
-                              isStandalone
-                                ? "bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300"
+                            <span
+                              className={
+                                "shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider " +
+                                (isStandalone
+                                  ? "bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300"
+                                  : isFreeTest
+                                    ? "bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300"
+                                    : !unlocked
+                                      ? "bg-muted text-muted-foreground border border-border"
+                                      : done
+                                        ? "bg-success/15 text-success border border-success/30"
+                                        : "bg-primary/10 text-primary border border-primary/20")
+                              }
+                            >
+                              {isStandalone
+                                ? "Free"
                                 : isFreeTest
-                                ? "bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300"
-                                : !unlocked
-                                ? "bg-muted text-muted-foreground border border-border"
-                                : done
-                                ? "bg-success/15 text-success border border-success/30"
-                                : "bg-primary/10 text-primary border border-primary/20"
-                            )}>
-                              {isStandalone ? "Free" : isFreeTest ? "Free Trial" : !unlocked ? "Locked" : done ? "Done" : "Ready"}
+                                  ? "Free Trial"
+                                  : !unlocked
+                                    ? "Locked"
+                                    : done
+                                      ? "Done"
+                                      : "Ready"}
                             </span>
                           </div>
 
@@ -557,7 +721,11 @@ function Tests() {
                             </span>
                             {t.opens_at && (
                               <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-medium shrink-0">
-                                <Calendar className="h-3 w-3 text-primary" /> {new Date(t.opens_at).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}
+                                <Calendar className="h-3 w-3 text-primary" />{" "}
+                                {new Date(t.opens_at).toLocaleDateString("en-IN", {
+                                  month: "short",
+                                  day: "numeric",
+                                })}
                               </span>
                             )}
                           </div>
@@ -581,24 +749,36 @@ function Tests() {
                           <Button
                             asChild
                             size="sm"
-                            className={"w-full h-10 font-bold rounded-xl shadow-xs " + (
-                              isStandalone || isFreeTest
+                            className={
+                              "w-full h-10 font-bold rounded-xl shadow-xs " +
+                              (isStandalone || isFreeTest
                                 ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                                : "bg-primary hover:bg-primary/90 text-primary-foreground"
-                            )}
+                                : "bg-primary hover:bg-primary/90 text-primary-foreground")
+                            }
                           >
                             <Link to="/app/tests/$testId" params={{ testId: t.id }}>
                               {done ? (
-                                <><CheckCircle2 className="mr-1.5 h-4 w-4" /> Reattempt Test</>
+                                <>
+                                  <CheckCircle2 className="mr-1.5 h-4 w-4" /> Reattempt Test
+                                </>
                               ) : (
-                                <><Play className="mr-1.5 h-4 w-4 fill-current" /> Start Test</>
+                                <>
+                                  <Play className="mr-1.5 h-4 w-4 fill-current" /> Start Test
+                                </>
                               )}
                             </Link>
                           </Button>
                         ) : (
-                          <Button asChild variant="secondary" size="sm" className="w-full h-10 font-bold rounded-xl" disabled={entLoading}>
+                          <Button
+                            asChild
+                            variant="secondary"
+                            size="sm"
+                            className="w-full h-10 font-bold rounded-xl"
+                            disabled={entLoading}
+                          >
                             <Link to="/app/pricing">
-                              <Lock className="mr-1.5 h-4 w-4 text-muted-foreground" /> Unlock to Access
+                              <Lock className="mr-1.5 h-4 w-4 text-muted-foreground" /> Unlock to
+                              Access
                             </Link>
                           </Button>
                         )}
@@ -613,7 +793,12 @@ function Tests() {
       </Tabs>
 
       {/* Planner Info / Download Dialog */}
-      <Dialog open={!!plannerModalSeries} onOpenChange={(open) => { if (!open) setPlannerModalSeries(null); }}>
+      <Dialog
+        open={!!plannerModalSeries}
+        onOpenChange={(open) => {
+          if (!open) setPlannerModalSeries(null);
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -629,11 +814,15 @@ function Tests() {
             <div className="rounded-2xl border bg-muted/40 p-4 space-y-2">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>Category</span>
-                <span className="font-semibold capitalize text-foreground">{plannerModalSeries?.kind} Syllabus</span>
+                <span className="font-semibold capitalize text-foreground">
+                  {plannerModalSeries?.kind} Syllabus
+                </span>
               </div>
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>Subject</span>
-                <span className="font-semibold capitalize text-foreground">{plannerModalSeries?.subject}</span>
+                <span className="font-semibold capitalize text-foreground">
+                  {plannerModalSeries?.subject}
+                </span>
               </div>
               {plannerModalSeries?.description && (
                 <div className="pt-2 border-t text-xs text-muted-foreground">
@@ -645,16 +834,30 @@ function Tests() {
             {plannerModalSeries?.planner_pdf_url ? (
               <div className="space-y-2.5">
                 <p className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
-                  <CheckCircle2 className="h-4 w-4" /> Study planner PDF is available for download and online view.
+                  <CheckCircle2 className="h-4 w-4" /> Study planner PDF is available for download
+                  and online view.
                 </p>
                 <div className="flex gap-2">
                   <Button asChild className="flex-1 font-bold rounded-xl gap-1.5 cursor-pointer">
-                    <a href={plannerModalSeries.planner_pdf_url} target="_blank" rel="noopener noreferrer">
+                    <a
+                      href={plannerModalSeries.planner_pdf_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       <ExternalLink className="h-4 w-4" /> Open PDF in New Tab
                     </a>
                   </Button>
-                  <Button asChild variant="outline" className="font-bold rounded-xl gap-1.5 cursor-pointer">
-                    <a href={plannerModalSeries.planner_pdf_url} download target="_blank" rel="noopener noreferrer">
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="font-bold rounded-xl gap-1.5 cursor-pointer"
+                  >
+                    <a
+                      href={plannerModalSeries.planner_pdf_url}
+                      download
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       <Download className="h-4 w-4" /> Download
                     </a>
                   </Button>
@@ -667,14 +870,19 @@ function Tests() {
                 </div>
                 <h4 className="font-bold text-sm text-foreground">Schedule Uploading Soon</h4>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  The study planner and test schedule PDF for <b>{plannerModalSeries?.title}</b> is currently being prepared and will be uploaded shortly by the instructor.
+                  The study planner and test schedule PDF for <b>{plannerModalSeries?.title}</b> is
+                  currently being prepared and will be uploaded shortly by the instructor.
                 </p>
               </div>
             )}
           </div>
 
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setPlannerModalSeries(null)} className="cursor-pointer">
+            <Button
+              variant="ghost"
+              onClick={() => setPlannerModalSeries(null)}
+              className="cursor-pointer"
+            >
               Close
             </Button>
           </DialogFooter>

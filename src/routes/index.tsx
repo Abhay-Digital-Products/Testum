@@ -6,23 +6,60 @@ import { Countdown } from "@/components/countdown";
 import { AuthDialog } from "@/components/auth-dialog";
 import { PWAInstallButton } from "@/components/pwa-install-button";
 import { SUPPORT } from "@/lib/support";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  ArrowRight, ShieldCheck, Monitor, BarChart3, CloudUpload, LineChart, FileText,
-  BookOpen, Layers, Trophy, Check, CheckCircle2, Star, Zap, CalendarCheck, RefreshCw,
-  FileQuestion, Sparkles, Send, Mail, Menu, LayoutDashboard, ChevronRight, Gift, Crown,
-  LogIn, UserPlus, Phone,
+  ArrowRight,
+  ShieldCheck,
+  Monitor,
+  BarChart3,
+  CloudUpload,
+  LineChart,
+  FileText,
+  BookOpen,
+  Layers,
+  Trophy,
+  Check,
+  CheckCircle2,
+  Star,
+  Zap,
+  CalendarCheck,
+  RefreshCw,
+  FileQuestion,
+  Sparkles,
+  Send,
+  Mail,
+  Menu,
+  LayoutDashboard,
+  ChevronRight,
+  Gift,
+  Crown,
+  LogIn,
+  UserPlus,
+  Phone,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Testum - India's Most Affordable NEET CBT Test Series" },
-      { name: "description", content: "Chapter-wise, part-syllabus and full-syllabus NEET CBT tests with real exam interface, AI analysis and PDF reports. Plans from ₹99, combo ₹149." },
+      {
+        name: "description",
+        content:
+          "Chapter-wise, part-syllabus and full-syllabus NEET CBT tests with real exam interface, AI analysis and PDF reports. Plans from ₹99, combo ₹149.",
+      },
       { property: "og:title", content: "Testum  -  NEET CBT Test Series 2027" },
-      { property: "og:description", content: "Real CBT experience, AI performance analysis and detailed solutions. Plans from ₹99, combo pack ₹149." },
+      {
+        property: "og:description",
+        content:
+          "Real CBT experience, AI performance analysis and detailed solutions. Plans from ₹99, combo pack ₹149.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -46,31 +83,83 @@ const strip = [
   { Icon: Zap, v: "98%", l: "Platform Uptime" },
 ];
 
-const trustRow = ["CBT Experience", "Detailed Solutions", "Performance Analytics", "Secure & Reliable"];
+const trustRow = [
+  "CBT Experience",
+  "Detailed Solutions",
+  "Performance Analytics",
+  "Secure & Reliable",
+];
 
 const difference = [
-  { Icon: Monitor, t: "Real CBT experience", d: "Practice in a real CBT environment with subject tabs, timer, review and exam-style flow." },
-  { Icon: BarChart3, t: "Actionable test analysis", d: "Understand subject-wise and chapter-wise performance and focus on weak areas." },
-  { Icon: CloudUpload, t: "Never lose an attempt", d: "Your answers, remaining time and current question are saved. Resume safely after a refresh." },
-  { Icon: LineChart, t: "Full progress tracking", d: "Track your scores, accuracy and progress throughout your NEET 2027 preparation year." },
-  { Icon: FileText, t: "PDF reports & solutions", d: "Download detailed performance reports with every question, your answer and the solution." },
+  {
+    Icon: Monitor,
+    t: "Real CBT experience",
+    d: "Practice in a real CBT environment with subject tabs, timer, review and exam-style flow.",
+  },
+  {
+    Icon: BarChart3,
+    t: "Actionable test analysis",
+    d: "Understand subject-wise and chapter-wise performance and focus on weak areas.",
+  },
+  {
+    Icon: CloudUpload,
+    t: "Never lose an attempt",
+    d: "Your answers, remaining time and current question are saved. Resume safely after a refresh.",
+  },
+  {
+    Icon: LineChart,
+    t: "Full progress tracking",
+    d: "Track your scores, accuracy and progress throughout your NEET 2027 preparation year.",
+  },
+  {
+    Icon: FileText,
+    t: "PDF reports & solutions",
+    d: "Download detailed performance reports with every question, your answer and the solution.",
+  },
 ];
 
 const plans = [
   {
-    t: "Chapter Wise", d: "Tests as per single chapters", price: 99, Icon: BookOpen,
+    t: "Chapter Wise",
+    d: "Tests as per single chapters",
+    price: 99,
+    Icon: BookOpen,
     tone: "text-emerald-600 bg-emerald-50",
-    points: ["Tests for all 79 NCERT chapters", "Topic-wise & subject-wise tests", "Regular chapter practice", "Detailed solutions", "Performance analysis"],
+    points: [
+      "Tests for all 79 NCERT chapters",
+      "Topic-wise & subject-wise tests",
+      "Regular chapter practice",
+      "Detailed solutions",
+      "Performance analysis",
+    ],
   },
   {
-    t: "Part Syllabus", d: "Tests as per planned syllabus", price: 99, Icon: Layers,
+    t: "Part Syllabus",
+    d: "Tests as per planned syllabus",
+    price: 99,
+    Icon: Layers,
     tone: "text-primary bg-primary/10",
-    points: ["Tests based on planned syllabus", "Class 11 & 12 checkpoints", "Regular part-syllabus tests", "Detailed solutions", "Performance analysis"],
+    points: [
+      "Tests based on planned syllabus",
+      "Class 11 & 12 checkpoints",
+      "Regular part-syllabus tests",
+      "Detailed solutions",
+      "Performance analysis",
+    ],
   },
   {
-    t: "Full Syllabus", d: "Complete NEET-pattern mock tests", price: 99, Icon: Trophy,
+    t: "Full Syllabus",
+    d: "Complete NEET-pattern mock tests",
+    price: 99,
+    Icon: Trophy,
     tone: "text-violet-600 bg-violet-50",
-    points: ["Full-length NEET pattern tests", "Physics, Chemistry & Biology", "180 Q · 180 min simulation", "Detailed solutions", "CBT + PDF mode"],
+    points: [
+      "Full-length NEET pattern tests",
+      "Physics, Chemistry & Biology",
+      "180 Q · 180 min simulation",
+      "Detailed solutions",
+      "CBT + PDF mode",
+    ],
   },
 ];
 
@@ -96,12 +185,30 @@ const reportBars = [
 ];
 
 const faqs = [
-  { q: "Is Testum only for NEET 2027 aspirants?", a: "The platform is built for NEET aspirants of any batch  -  Class 11, Class 12 and droppers. The default planner targets NEET 2027." },
-  { q: "What does the ₹149 combo include?", a: "Chapter-wise, part-syllabus and full-syllabus test series  -  every test on the platform  -  in a single one-time payment." },
-  { q: "Are the tests available in CBT mode?", a: "Yes. Every test runs in an NTA-style CBT player with a question palette, timer, mark-for-review and subject switching." },
-  { q: "How long is my purchase valid?", a: "Your access stays active for the duration shown on the plan at the time of purchase  -  designed to cover your full preparation year." },
-  { q: "Can I see my performance after the test?", a: "Instantly. You get score, accuracy, subject and chapter breakdown, AI weak-topic analysis and a downloadable PDF with every question and solution." },
-  { q: "Do you provide refunds?", a: "Plans unlock instantly, so purchases are non-refundable. Failed or duplicate payments are always resolved  -  see our Refund Policy." },
+  {
+    q: "Is Testum only for NEET 2027 aspirants?",
+    a: "The platform is built for NEET aspirants of any batch  -  Class 11, Class 12 and droppers. The default planner targets NEET 2027.",
+  },
+  {
+    q: "What does the ₹149 combo include?",
+    a: "Chapter-wise, part-syllabus and full-syllabus test series  -  every test on the platform  -  in a single one-time payment.",
+  },
+  {
+    q: "Are the tests available in CBT mode?",
+    a: "Yes. Every test runs in an NTA-style CBT player with a question palette, timer, mark-for-review and subject switching.",
+  },
+  {
+    q: "How long is my purchase valid?",
+    a: "Your access stays active for the duration shown on the plan at the time of purchase  -  designed to cover your full preparation year.",
+  },
+  {
+    q: "Can I see my performance after the test?",
+    a: "Instantly. You get score, accuracy, subject and chapter breakdown, AI weak-topic analysis and a downloadable PDF with every question and solution.",
+  },
+  {
+    q: "Do you provide refunds?",
+    a: "Plans unlock instantly, so purchases are non-refundable. Failed or duplicate payments are always resolved  -  see our Refund Policy.",
+  },
 ];
 
 function Home() {
@@ -118,7 +225,8 @@ function Home() {
   };
 
   useEffect(() => {
-    supabase.auth.getUser()
+    supabase.auth
+      .getUser()
       .then(({ data }: any) => {
         if (data?.user) setUser(data.user);
       })
@@ -142,14 +250,21 @@ function Home() {
 
     supabase
       .from("tests")
-      .select("id, title, duration_minutes, total_questions, marks_correct, is_free, series_id, test_series(kind, title, plan_code)")
+      .select(
+        "id, title, duration_minutes, total_questions, marks_correct, is_free, series_id, test_series(kind, title, plan_code)",
+      )
       .order("created_at", { ascending: false })
       .then(({ data }: any) => {
         const freeOnly = (data ?? []).filter((t: any) => {
           const isStandalone = !t.series_id || !t.test_series || !t.test_series?.kind;
           if (isStandalone) return true;
-          const isFreeSeries = t.test_series?.plan_code === "free" || (t.test_series?.title ?? "").toLowerCase().includes("free");
-          const isCategorized = t.test_series?.kind === "part" || t.test_series?.kind === "full" || t.test_series?.kind === "chapter";
+          const isFreeSeries =
+            t.test_series?.plan_code === "free" ||
+            (t.test_series?.title ?? "").toLowerCase().includes("free");
+          const isCategorized =
+            t.test_series?.kind === "part" ||
+            t.test_series?.kind === "full" ||
+            t.test_series?.kind === "chapter";
           if (isCategorized && !isFreeSeries) return false;
           return Boolean(t.is_free || isFreeSeries);
         });
@@ -177,9 +292,21 @@ function Home() {
   const comboActive = isPlanActive("combo");
 
   const mobileNavItems = [
-    { href: "#free-tests", label: "Free Tests", icon: Gift, badge: "100% Free", badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+    {
+      href: "#free-tests",
+      label: "Free Tests",
+      icon: Gift,
+      badge: "100% Free",
+      badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    },
     { href: "/app/tests", label: "Test Series", icon: BookOpen, isRoute: true },
-    { href: "#pricing", label: "Plans & Pricing", icon: Crown, badge: "From ₹99", badgeColor: "bg-blue-50 text-blue-700 border-blue-200" },
+    {
+      href: "#pricing",
+      label: "Plans & Pricing",
+      icon: Crown,
+      badge: "From ₹99",
+      badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
+    },
     { href: "#features", label: "Features", icon: Layers },
     { href: "#results", label: "How It Works", icon: BarChart3 },
     { href: "#faq", label: "FAQ", icon: FileQuestion },
@@ -194,7 +321,13 @@ function Home() {
           <Logo />
           <nav className="hidden items-center gap-7 lg:flex">
             {navLinks.map((l) => (
-              <a key={l.href} href={l.href} className="text-sm font-medium text-slate-600 transition hover:text-primary">{l.label}</a>
+              <a
+                key={l.href}
+                href={l.href}
+                className="text-sm font-medium text-slate-600 transition hover:text-primary"
+              >
+                {l.label}
+              </a>
             ))}
           </nav>
           <div className="hidden items-center gap-2.5 lg:flex">
@@ -208,8 +341,14 @@ function Home() {
             </PWAInstallButton>
 
             {user ? (
-              <Button asChild size="sm" className="rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 shadow-sm">
-                <Link to="/app"><LayoutDashboard className="mr-1.5 h-4 w-4" /> Go to Dashboard</Link>
+              <Button
+                asChild
+                size="sm"
+                className="rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 shadow-sm"
+              >
+                <Link to="/app">
+                  <LayoutDashboard className="mr-1.5 h-4 w-4" /> Go to Dashboard
+                </Link>
               </Button>
             ) : (
               <>
@@ -243,31 +382,48 @@ function Home() {
             </PWAInstallButton>
 
             {user && (
-              <Button asChild size="sm" className="rounded-lg bg-primary text-xs font-semibold text-primary-foreground">
+              <Button
+                asChild
+                size="sm"
+                className="rounded-lg bg-primary text-xs font-semibold text-primary-foreground"
+              >
                 <Link to="/app">Dashboard</Link>
               </Button>
             )}
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-lg text-slate-700 hover:bg-slate-100">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-lg text-slate-700 hover:bg-slate-100"
+                >
                   <Menu className="h-5 w-5" />
                   <span className="sr-only">Toggle navigation menu</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[88vw] max-w-sm p-0 flex flex-col justify-between bg-white overflow-y-auto">
+              <SheetContent
+                side="right"
+                className="w-[88vw] max-w-sm p-0 flex flex-col justify-between bg-white overflow-y-auto"
+              >
                 <div className="p-5 border-b border-slate-100">
                   <div className="flex items-center justify-between">
                     <Logo />
-                    <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold text-primary">NEET 2027</span>
+                    <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold text-primary">
+                      NEET 2027
+                    </span>
                   </div>
 
                   {/* Highlights banner */}
                   <div className="mt-4 rounded-xl bg-gradient-to-r from-blue-500/10 via-primary/5 to-transparent border border-blue-500/15 p-3">
                     <div className="flex items-center gap-2">
                       <Sparkles className="h-4 w-4 text-primary shrink-0" />
-                      <div className="text-xs font-semibold text-slate-800">Real NTA CBT Platform</div>
+                      <div className="text-xs font-semibold text-slate-800">
+                        Real NTA CBT Platform
+                      </div>
                     </div>
-                    <div className="mt-1 text-[11px] text-slate-600">340+ Chapter, Part & Full mock tests with AI scorecards.</div>
+                    <div className="mt-1 text-[11px] text-slate-600">
+                      340+ Chapter, Part & Full mock tests with AI scorecards.
+                    </div>
                   </div>
 
                   {/* Nav links */}
@@ -284,7 +440,12 @@ function Home() {
                           </div>
                           <div className="flex items-center gap-2">
                             {item.badge && (
-                              <span className={"rounded-md px-2 py-0.5 text-[10px] font-bold border " + item.badgeColor}>
+                              <span
+                                className={
+                                  "rounded-md px-2 py-0.5 text-[10px] font-bold border " +
+                                  item.badgeColor
+                                }
+                              >
                                 {item.badge}
                               </span>
                             )}
@@ -295,13 +456,23 @@ function Home() {
 
                       if (item.isRoute) {
                         return (
-                          <Link key={item.href} to={item.href as never} onClick={() => setMobileOpen(false)} className="block">
+                          <Link
+                            key={item.href}
+                            to={item.href as never}
+                            onClick={() => setMobileOpen(false)}
+                            className="block"
+                          >
                             {content}
                           </Link>
                         );
                       }
                       return (
-                        <a key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className="block">
+                        <a
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setMobileOpen(false)}
+                          className="block"
+                        >
                           {content}
                         </a>
                       );
@@ -321,7 +492,11 @@ function Home() {
                   </PWAInstallButton>
 
                   {user ? (
-                    <Button asChild size="lg" className="w-full h-11 rounded-xl bg-primary font-semibold text-primary-foreground shadow-md shadow-primary/20">
+                    <Button
+                      asChild
+                      size="lg"
+                      className="w-full h-11 rounded-xl bg-primary font-semibold text-primary-foreground shadow-md shadow-primary/20"
+                    >
                       <Link to="/app" onClick={() => setMobileOpen(false)}>
                         <LayoutDashboard className="mr-2 h-4 w-4" /> Go to Dashboard
                       </Link>
@@ -353,11 +528,19 @@ function Home() {
                   )}
 
                   <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-500">
-                    <a href={SUPPORT.telegram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-primary">
+                    <a
+                      href={SUPPORT.telegram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 hover:text-primary"
+                    >
                       <Send className="h-3.5 w-3.5 text-primary" /> Telegram
                     </a>
                     <span>·</span>
-                    <a href={`mailto:${SUPPORT.email}`} className="flex items-center gap-1.5 hover:text-primary">
+                    <a
+                      href={`mailto:${SUPPORT.email}`}
+                      className="flex items-center gap-1.5 hover:text-primary"
+                    >
                       <Mail className="h-3.5 w-3.5 text-primary" /> Email Support
                     </a>
                   </div>
@@ -373,20 +556,28 @@ function Home() {
         <div className="mx-auto grid max-w-6xl gap-10 px-5 pb-14 pt-10 lg:grid-cols-[1fr_1.15fr] lg:items-center lg:pb-20 lg:pt-16">
           <div>
             <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary" /> Built exclusively for NEET aspirants
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" /> Built exclusively for NEET
+              aspirants
             </span>
             <h1 className="mt-5 font-display text-[34px] font-extrabold leading-[1.1] tracking-tight sm:text-5xl">
-              India's most affordable<br />
+              India's most affordable
+              <br />
               <span className="text-primary">NEET CBT</span> Test Series.
             </h1>
             <p className="mt-4 max-w-md text-[15px] leading-relaxed text-slate-600">
-              Full-syllabus, part-syllabus, chapter-wise and daily practice  -  built to help you improve your score
-              and secure your MBBS seat.
+              Full-syllabus, part-syllabus, chapter-wise and daily practice - built to help you
+              improve your score and secure your MBBS seat.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
               {user ? (
-                <Button asChild size="lg" className="h-12 rounded-xl bg-primary px-6 font-semibold text-primary-foreground shadow-elegant hover:bg-primary/90">
-                  <Link to="/app">Go to Dashboard <ArrowRight className="ml-1.5 h-4 w-4" /></Link>
+                <Button
+                  asChild
+                  size="lg"
+                  className="h-12 rounded-xl bg-primary px-6 font-semibold text-primary-foreground shadow-elegant hover:bg-primary/90"
+                >
+                  <Link to="/app">
+                    Go to Dashboard <ArrowRight className="ml-1.5 h-4 w-4" />
+                  </Link>
                 </Button>
               ) : (
                 <Button
@@ -398,17 +589,29 @@ function Home() {
                 </Button>
               )}
               <PWAInstallButton variant="hero" />
-              <Button asChild size="lg" variant="outline" className="h-12 rounded-xl border-slate-200 px-6 font-semibold">
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="h-12 rounded-xl border-slate-200 px-6 font-semibold"
+              >
                 <a href="#pricing">View plans</a>
               </Button>
             </div>
             <div className="mt-7 flex items-center gap-3">
               <div className="flex -space-x-2">
                 {["A", "P", "R", "S"].map((c) => (
-                  <span key={c} className="grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-primary/15 text-xs font-bold text-primary">{c}</span>
+                  <span
+                    key={c}
+                    className="grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-primary/15 text-xs font-bold text-primary"
+                  >
+                    {c}
+                  </span>
                 ))}
               </div>
-              <p className="text-xs text-slate-600"><b className="text-[#0F172A]">5000+</b> aspirants already improving with Testum</p>
+              <p className="text-xs text-slate-600">
+                <b className="text-[#0F172A]">5000+</b> aspirants already improving with Testum
+              </p>
             </div>
           </div>
 
@@ -420,16 +623,25 @@ function Home() {
                 <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
               </div>
-              <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400">Student Dashboard</span>
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />Live</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400">
+                Student Dashboard
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                Live
+              </span>
             </div>
 
             <div className="mt-4 flex items-start justify-between">
               <div>
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Good morning</div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                  Good morning
+                </div>
                 <div className="font-display text-lg font-bold">Ready to improve?</div>
               </div>
-              <span className="rounded-md bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary">NEET 2027</span>
+              <span className="rounded-md bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary">
+                NEET 2027
+              </span>
             </div>
 
             <div className="mt-4 grid grid-cols-3 gap-2.5">
@@ -439,7 +651,9 @@ function Home() {
                 { l: "Score", v: "642", s: "/720" },
               ].map((c) => (
                 <div key={c.l} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
-                  <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">{c.l}</div>
+                  <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">
+                    {c.l}
+                  </div>
                   <div className="mt-1 font-display text-xl font-extrabold">{c.v}</div>
                   <div className="text-[10px] font-medium text-emerald-600">{c.s}</div>
                 </div>
@@ -447,21 +661,30 @@ function Home() {
             </div>
 
             <div className="mt-3 rounded-xl bg-hero p-4 text-primary-foreground">
-              <div className="text-[9px] font-bold uppercase tracking-wider opacity-80">Recommended next</div>
+              <div className="text-[9px] font-bold uppercase tracking-wider opacity-80">
+                Recommended next
+              </div>
               <div className="mt-1 flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="truncate font-display text-sm font-bold">NEET Full Syllabus Mock  -  26</div>
+                  <div className="truncate font-display text-sm font-bold">
+                    NEET Full Syllabus Mock - 26
+                  </div>
                   <div className="text-[10px] opacity-85">180 Questions · 180 Minutes</div>
                 </div>
-                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full border-2 border-primary-foreground/40 text-xs font-bold">89%</div>
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full border-2 border-primary-foreground/40 text-xs font-bold">
+                  89%
+                </div>
               </div>
               <div className="mt-3 flex items-center justify-between text-[10px] opacity-85">
-                <span>● Ready to attempt</span><span>Instant scorecard</span>
+                <span>● Ready to attempt</span>
+                <span>Instant scorecard</span>
               </div>
             </div>
 
             <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Performance</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                Performance
+              </span>
               <span className="text-[10px] text-slate-500">Last 8 tests</span>
             </div>
             <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">
@@ -476,9 +699,13 @@ function Home() {
             <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
               {strip.map(({ Icon, v, l }) => (
                 <div key={l} className="flex items-center gap-3">
-                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/10 text-primary-foreground"><Icon className="h-4 w-4" /></div>
+                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/10 text-primary-foreground">
+                    <Icon className="h-4 w-4" />
+                  </div>
                   <div className="min-w-0">
-                    <div className="font-display text-lg font-extrabold text-white sm:text-xl">{v}</div>
+                    <div className="font-display text-lg font-extrabold text-white sm:text-xl">
+                      {v}
+                    </div>
                     <div className="truncate text-[11px] text-slate-400">{l}</div>
                   </div>
                 </div>
@@ -486,17 +713,24 @@ function Home() {
             </div>
             <div className="mt-6 border-t border-white/10 pt-5">
               <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" /> NEET 2027 countdown
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" /> NEET 2027
+                countdown
               </div>
-              <div className="mt-3"><Countdown dark /></div>
+              <div className="mt-3">
+                <Countdown dark />
+              </div>
             </div>
           </div>
         </div>
 
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-2 px-5 pb-10 pt-4">
           {trustRow.map((t) => (
-            <span key={t} className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600">
-              <Check className="h-3.5 w-3.5 text-primary" />{t}
+            <span
+              key={t}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600"
+            >
+              <Check className="h-3.5 w-3.5 text-primary" />
+              {t}
             </span>
           ))}
         </div>
@@ -504,19 +738,30 @@ function Home() {
 
       {/* THE TESTUM DIFFERENCE */}
       <section id="features" className="mx-auto max-w-6xl px-5 py-16 scroll-mt-20">
-        <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">The Testum difference</span>
+        <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
+          The Testum difference
+        </span>
         <h2 className="mt-3 font-display text-2xl font-extrabold leading-tight tracking-tight sm:text-4xl">
-          Everything an aspirant needs between <span className="text-primary">practice</span> and <span className="text-primary">selection</span>.
+          Everything an aspirant needs between <span className="text-primary">practice</span> and{" "}
+          <span className="text-primary">selection</span>.
         </h2>
         <p className="mt-3 max-w-2xl text-sm text-slate-600">
-          A focused test platform designed to help you identify weak areas, improve accuracy and track your progress.
+          A focused test platform designed to help you identify weak areas, improve accuracy and
+          track your progress.
         </p>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {difference.map(({ Icon, t, d }, i) => (
-            <div key={t} className="relative rounded-2xl border border-slate-200 bg-white p-5 shadow-soft transition hover:-translate-y-0.5 hover:shadow-elegant">
-              <span className="absolute right-4 top-4 text-[10px] font-bold text-slate-300">0{i + 1}</span>
-              <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary"><Icon className="h-4 w-4" /></div>
+            <div
+              key={t}
+              className="relative rounded-2xl border border-slate-200 bg-white p-5 shadow-soft transition hover:-translate-y-0.5 hover:shadow-elegant"
+            >
+              <span className="absolute right-4 top-4 text-[10px] font-bold text-slate-300">
+                0{i + 1}
+              </span>
+              <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
+                <Icon className="h-4 w-4" />
+              </div>
               <div className="mt-4 font-display text-sm font-bold">{t}</div>
               <p className="mt-2 text-xs leading-relaxed text-slate-600">{d}</p>
             </div>
@@ -525,7 +770,10 @@ function Home() {
       </section>
 
       {/* FREE TESTS SECTION */}
-      <section id="free-tests" className="bg-gradient-to-b from-emerald-950/5 to-white py-16 scroll-mt-20 border-y border-emerald-100">
+      <section
+        id="free-tests"
+        className="bg-gradient-to-b from-emerald-950/5 to-white py-16 scroll-mt-20 border-y border-emerald-100"
+      >
         <div className="mx-auto max-w-6xl px-5">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
@@ -536,12 +784,19 @@ function Home() {
                 Start practicing with <span className="text-emerald-600">Free NEET CBT Tests</span>.
               </h2>
               <p className="mt-2 text-sm text-slate-600 max-w-xl">
-                Experience real NTA exam interface, countdown timer, question palette, and instant scorecards without paying anything.
+                Experience real NTA exam interface, countdown timer, question palette, and instant
+                scorecards without paying anything.
               </p>
             </div>
             {user ? (
-              <Button asChild size="lg" className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-soft">
-                <Link to="/app/tests" search={{ tab: "free" }}>View All Free Tests <ArrowRight className="ml-1.5 h-4 w-4" /></Link>
+              <Button
+                asChild
+                size="lg"
+                className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-soft"
+              >
+                <Link to="/app/tests" search={{ tab: "free" }}>
+                  View All Free Tests <ArrowRight className="ml-1.5 h-4 w-4" />
+                </Link>
               </Button>
             ) : (
               <Button
@@ -558,18 +813,27 @@ function Home() {
             {freeTests.length > 0 ? (
               <div className="grid gap-5 md:grid-cols-3">
                 {freeTests.map((ft: any) => (
-                  <div key={ft.id} className="flex flex-col justify-between rounded-2xl border border-emerald-200/80 bg-white p-6 shadow-soft transition hover:-translate-y-1 hover:shadow-elegant">
+                  <div
+                    key={ft.id}
+                    className="flex flex-col justify-between rounded-2xl border border-emerald-200/80 bg-white p-6 shadow-soft transition hover:-translate-y-1 hover:shadow-elegant"
+                  >
                     <div>
                       <div className="flex items-center justify-between">
                         <span className="rounded-md bg-emerald-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 border border-emerald-200">
                           100% Free
                         </span>
                         <span className="text-[11px] font-semibold text-slate-400 capitalize">
-                          {!ft.test_series || !ft.test_series?.kind ? "Standalone Free Test" : `${ft.test_series.kind} Mock`}
+                          {!ft.test_series || !ft.test_series?.kind
+                            ? "Standalone Free Test"
+                            : `${ft.test_series.kind} Mock`}
                         </span>
                       </div>
-                      <h3 className="mt-4 font-display text-lg font-bold leading-snug">{ft.title}</h3>
-                      <p className="mt-2 text-xs leading-relaxed text-slate-600">{ft.test_series?.title ?? "Standalone Free Practice Test"}</p>
+                      <h3 className="mt-4 font-display text-lg font-bold leading-snug">
+                        {ft.title}
+                      </h3>
+                      <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                        {ft.test_series?.title ?? "Standalone Free Practice Test"}
+                      </p>
                       <div className="mt-4 flex items-center gap-3 text-xs font-medium text-slate-500 border-t border-slate-100 pt-3">
                         <span>{ft.total_questions} Questions</span>
                         <span>·</span>
@@ -580,8 +844,13 @@ function Home() {
                     </div>
                     <div className="mt-6 pt-2">
                       {user ? (
-                        <Button asChild className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
-                          <Link to="/app/tests/$testId" params={{ testId: ft.id }}>Attempt Test Now <ArrowRight className="ml-1.5 h-4 w-4" /></Link>
+                        <Button
+                          asChild
+                          className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                        >
+                          <Link to="/app/tests/$testId" params={{ testId: ft.id }}>
+                            Attempt Test Now <ArrowRight className="ml-1.5 h-4 w-4" />
+                          </Link>
                         </Button>
                       ) : (
                         <Button
@@ -602,12 +871,19 @@ function Home() {
                 </div>
                 <h3 className="mt-3 font-display font-semibold text-lg">Free Practice Tests</h3>
                 <p className="mt-1 text-sm text-slate-600 max-w-md mx-auto">
-                  New free tests created in your Supabase admin panel will automatically appear here for instant practice.
+                  New free tests created in your Supabase admin panel will automatically appear here
+                  for instant practice.
                 </p>
                 <div className="mt-5">
                   {user ? (
-                    <Button asChild variant="outline" className="rounded-xl border-emerald-300 text-emerald-700 hover:bg-emerald-50">
-                      <Link to="/app/tests">Browse Test Portal <ArrowRight className="ml-1.5 h-4 w-4" /></Link>
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="rounded-xl border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                    >
+                      <Link to="/app/tests">
+                        Browse Test Portal <ArrowRight className="ml-1.5 h-4 w-4" />
+                      </Link>
                     </Button>
                   ) : (
                     <Button
@@ -629,9 +905,13 @@ function Home() {
       <section id="pricing" className="bg-slate-50 py-16 scroll-mt-20">
         <div className="mx-auto max-w-6xl px-5">
           <div className="text-center">
-            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">Testum plans & pricing</span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
+              Testum plans & pricing
+            </span>
             <h2 className="mt-3 font-display text-2xl font-extrabold tracking-tight sm:text-4xl">
-              Focused preparation.<br /><span className="text-primary">Aspirant-friendly</span> pricing.
+              Focused preparation.
+              <br />
+              <span className="text-primary">Aspirant-friendly</span> pricing.
             </h2>
             <p className="mx-auto mt-3 max-w-lg text-sm text-slate-600">
               Choose the plan that fits your preparation. Every purchase stays valid till NEET 2027.
@@ -639,96 +919,138 @@ function Home() {
           </div>
 
           <div className="mt-10 grid gap-4 lg:grid-cols-3">
-            {plans.filter(p => {
-              const code = p.t.toLowerCase().includes("chapter") ? "chapter" : p.t.toLowerCase().includes("part") ? "part" : "full";
-              return isPlanActive(code);
-            }).map(({ t, d, price, Icon, tone, points }) => {
-              const code = t.toLowerCase().includes("chapter") ? "chapter" : t.toLowerCase().includes("part") ? "part" : "full";
-              const livePrice = planPriceMap(code, price);
-              return (
-              <div key={t} className="flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-soft transition hover:-translate-y-0.5 hover:shadow-elegant">
-                <div className="flex items-center gap-3">
-                  <div className={`grid h-10 w-10 place-items-center rounded-xl ${tone}`}><Icon className="h-5 w-5" /></div>
-                  <div>
-                    <div className="font-display text-base font-bold">{t}</div>
-                    <div className="text-[11px] text-slate-500">{d}</div>
+            {plans
+              .filter((p) => {
+                const code = p.t.toLowerCase().includes("chapter")
+                  ? "chapter"
+                  : p.t.toLowerCase().includes("part")
+                    ? "part"
+                    : "full";
+                return isPlanActive(code);
+              })
+              .map(({ t, d, price, Icon, tone, points }) => {
+                const code = t.toLowerCase().includes("chapter")
+                  ? "chapter"
+                  : t.toLowerCase().includes("part")
+                    ? "part"
+                    : "full";
+                const livePrice = planPriceMap(code, price);
+                return (
+                  <div
+                    key={t}
+                    className="flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-soft transition hover:-translate-y-0.5 hover:shadow-elegant"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`grid h-10 w-10 place-items-center rounded-xl ${tone}`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <div className="font-display text-base font-bold">{t}</div>
+                        <div className="text-[11px] text-slate-500">{d}</div>
+                      </div>
+                    </div>
+                    <ul className="mt-5 flex-1 space-y-2.5">
+                      {points.map((p) => (
+                        <li key={p} className="flex items-start gap-2 text-[13px] text-slate-700">
+                          <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                          {p}
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-6 flex items-end justify-between border-t border-slate-100 pt-4">
+                      <div>
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                          Only
+                        </div>
+                        <div className="font-display text-3xl font-extrabold">₹{livePrice}</div>
+                      </div>
+                      {user ? (
+                        <Button
+                          asChild
+                          variant="outline"
+                          className="rounded-xl border-primary/30 font-semibold text-primary hover:bg-primary/5"
+                        >
+                          <Link to="/app/pricing">
+                            View tests <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          onClick={() => openAuth("signin")}
+                          className="rounded-xl border-primary/30 font-semibold text-primary hover:bg-primary/5"
+                        >
+                          View tests <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <ul className="mt-5 flex-1 space-y-2.5">
-                  {points.map((p) => (
-                    <li key={p} className="flex items-start gap-2 text-[13px] text-slate-700">
-                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />{p}
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-6 flex items-end justify-between border-t border-slate-100 pt-4">
-                  <div>
-                    <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Only</div>
-                    <div className="font-display text-3xl font-extrabold">₹{livePrice}</div>
-                  </div>
-                  {user ? (
-                    <Button asChild variant="outline" className="rounded-xl border-primary/30 font-semibold text-primary hover:bg-primary/5">
-                      <Link to="/app/pricing">View tests <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      onClick={() => openAuth("signin")}
-                      className="rounded-xl border-primary/30 font-semibold text-primary hover:bg-primary/5"
-                    >
-                      View tests <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+                );
+              })}
           </div>
 
           {/* COMBO BANNER */}
           {comboActive && (
-          <div className="mt-5 overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/70 p-6">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-center gap-4">
-                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-amber-100 text-amber-600"><Star className="h-6 w-6 fill-amber-400 text-amber-500" /></div>
-                <div>
-                  <span className="rounded-full bg-amber-200/70 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800">Best value</span>
-                  <div className="mt-1.5 font-display text-lg font-extrabold">Get Everything</div>
-                  <div className="text-xs text-slate-600">Chapter Wise + Part Syllabus + Full Syllabus</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                {plans.map(({ t, Icon }, i) => (
-                  <div key={t} className="flex items-center gap-3">
-                    {i > 0 && <span className="text-slate-400">+</span>}
-                    <div className="text-center">
-                      <div className="mx-auto grid h-9 w-9 place-items-center rounded-lg bg-white text-primary shadow-soft"><Icon className="h-4 w-4" /></div>
-                      <div className="mt-1 text-[10px] text-slate-600">{t}</div>
+            <div className="mt-5 overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/70 p-6">
+              <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-amber-100 text-amber-600">
+                    <Star className="h-6 w-6 fill-amber-400 text-amber-500" />
+                  </div>
+                  <div>
+                    <span className="rounded-full bg-amber-200/70 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800">
+                      Best value
+                    </span>
+                    <div className="mt-1.5 font-display text-lg font-extrabold">Get Everything</div>
+                    <div className="text-xs text-slate-600">
+                      Chapter Wise + Part Syllabus + Full Syllabus
                     </div>
                   </div>
-                ))}
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Only</div>
-                  <div className="font-display text-4xl font-extrabold text-amber-600">₹{comboPrice}</div>
                 </div>
-                {user ? (
-                  <Button asChild size="lg" className="h-12 rounded-xl bg-amber-500 px-6 font-semibold text-white hover:bg-amber-600">
-                    <Link to="/app/pricing">Get all plans now <ArrowRight className="ml-1.5 h-4 w-4" /></Link>
-                  </Button>
-                ) : (
-                  <Button
-                    size="lg"
-                    onClick={() => openAuth("signup")}
-                    className="h-12 rounded-xl bg-amber-500 px-6 font-semibold text-white hover:bg-amber-600"
-                  >
-                    Get all plans now <ArrowRight className="ml-1.5 h-4 w-4" />
-                  </Button>
-                )}
+                <div className="flex items-center gap-3">
+                  {plans.map(({ t, Icon }, i) => (
+                    <div key={t} className="flex items-center gap-3">
+                      {i > 0 && <span className="text-slate-400">+</span>}
+                      <div className="text-center">
+                        <div className="mx-auto grid h-9 w-9 place-items-center rounded-lg bg-white text-primary shadow-soft">
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div className="mt-1 text-[10px] text-slate-600">{t}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                      Only
+                    </div>
+                    <div className="font-display text-4xl font-extrabold text-amber-600">
+                      ₹{comboPrice}
+                    </div>
+                  </div>
+                  {user ? (
+                    <Button
+                      asChild
+                      size="lg"
+                      className="h-12 rounded-xl bg-amber-500 px-6 font-semibold text-white hover:bg-amber-600"
+                    >
+                      <Link to="/app/pricing">
+                        Get all plans now <ArrowRight className="ml-1.5 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button
+                      size="lg"
+                      onClick={() => openAuth("signup")}
+                      className="h-12 rounded-xl bg-amber-500 px-6 font-semibold text-white hover:bg-amber-600"
+                    >
+                      Get all plans now <ArrowRight className="ml-1.5 h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
           )}
 
           <div className="mt-6 grid grid-cols-2 gap-4 rounded-2xl border border-slate-200 bg-white p-5 sm:grid-cols-4">
@@ -749,23 +1071,31 @@ function Home() {
       <section id="results" className="mx-auto max-w-6xl px-5 py-16 scroll-mt-20">
         <div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
           <div>
-            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">Results that teach</span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
+              Results that teach
+            </span>
             <h2 className="mt-3 font-display text-2xl font-extrabold leading-tight tracking-tight sm:text-4xl">
-              Your score is<br />only the <span className="text-primary">beginning</span>.
+              Your score is
+              <br />
+              only the <span className="text-primary">beginning</span>.
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-slate-600">
-              Testum turns every test into a clear performance story  -  what worked, where you lost marks and what
-              to improve before your next test.
+              Testum turns every test into a clear performance story - what worked, where you lost
+              marks and what to improve before your next test.
             </p>
             <ul className="mt-6 space-y-2.5">
               {resultPoints.map((p) => (
                 <li key={p} className="flex items-start gap-2 text-[13px] text-slate-700">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />{p}
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  {p}
                 </li>
               ))}
             </ul>
             {user ? (
-              <Link to="/app/tests" className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
+              <Link
+                to="/app/tests"
+                className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+              >
                 Experience a free analysis <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             ) : (
@@ -782,25 +1112,39 @@ function Home() {
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-elegant sm:p-6">
             <div className="flex items-start justify-between">
               <div>
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Full syllabus mock 05</div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                  Full syllabus mock 05
+                </div>
                 <div className="font-display text-lg font-bold">Performance report</div>
               </div>
-              <span className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-600">Download PDF</span>
+              <span className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-600">
+                Download PDF
+              </span>
             </div>
 
             <div className="mt-6 grid items-center gap-6 sm:grid-cols-[auto_1fr]">
               <div className="mx-auto">
                 <svg viewBox="0 0 120 120" className="h-32 w-32 -rotate-90">
                   <circle cx="60" cy="60" r="52" fill="none" stroke="#E2E8F0" strokeWidth="12" />
-                  <circle cx="60" cy="60" r="52" fill="none" stroke="#2563EB" strokeWidth="12" strokeLinecap="round"
-                    strokeDasharray={`${2 * Math.PI * 52 * 0.892} ${2 * Math.PI * 52}`} />
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="52"
+                    fill="none"
+                    stroke="#2563EB"
+                    strokeWidth="12"
+                    strokeLinecap="round"
+                    strokeDasharray={`${2 * Math.PI * 52 * 0.892} ${2 * Math.PI * 52}`}
+                  />
                 </svg>
                 <div className="-mt-[86px] text-center">
                   <div className="font-display text-3xl font-extrabold">642</div>
                   <div className="text-xs text-slate-400">/720</div>
                 </div>
                 <div className="mt-12 text-center">
-                  <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Test accuracy</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                    Test accuracy
+                  </div>
                   <div className="font-display text-xl font-extrabold text-primary">89.2%</div>
                 </div>
               </div>
@@ -810,10 +1154,15 @@ function Home() {
                   <div key={s}>
                     <div className="flex justify-between text-xs">
                       <span className="font-medium">{s}</span>
-                      <span className="text-slate-500">{v} / {m}</span>
+                      <span className="text-slate-500">
+                        {v} / {m}
+                      </span>
                     </div>
                     <div className="mt-1.5 h-2 rounded-full bg-slate-100">
-                      <div className="h-full rounded-full bg-primary" style={{ width: `${(v / m) * 100}%` }} />
+                      <div
+                        className="h-full rounded-full bg-primary"
+                        style={{ width: `${(v / m) * 100}%` }}
+                      />
                     </div>
                   </div>
                 ))}
@@ -829,16 +1178,28 @@ function Home() {
       {/* FAQ */}
       <section id="faq" className="bg-slate-50 py-16 scroll-mt-20">
         <div className="mx-auto max-w-6xl px-5">
-          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">Questions, answered</span>
-          <h2 className="mt-3 font-display text-2xl font-extrabold tracking-tight sm:text-4xl">Everything clear before you begin.</h2>
+          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
+            Questions, answered
+          </span>
+          <h2 className="mt-3 font-display text-2xl font-extrabold tracking-tight sm:text-4xl">
+            Everything clear before you begin.
+          </h2>
           <p className="mt-2 text-sm text-slate-600">
             Still need help? Our support team is one message away on Telegram or email.
           </p>
           <Accordion type="single" collapsible className="mt-8 grid gap-3 lg:grid-cols-2">
             {faqs.map((f, i) => (
-              <AccordionItem key={i} value={`i${i}`} className="h-fit overflow-hidden rounded-xl border border-slate-200 bg-white px-4">
-                <AccordionTrigger className="py-3.5 text-left text-[13px] font-semibold hover:no-underline">{f.q}</AccordionTrigger>
-                <AccordionContent className="pb-4 text-[13px] text-slate-600">{f.a}</AccordionContent>
+              <AccordionItem
+                key={i}
+                value={`i${i}`}
+                className="h-fit overflow-hidden rounded-xl border border-slate-200 bg-white px-4"
+              >
+                <AccordionTrigger className="py-3.5 text-left text-[13px] font-semibold hover:no-underline">
+                  {f.q}
+                </AccordionTrigger>
+                <AccordionContent className="pb-4 text-[13px] text-slate-600">
+                  {f.a}
+                </AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>
@@ -848,15 +1209,23 @@ function Home() {
       {/* SUPPORT + CTA BAND */}
       <section id="support" className="bg-hero py-14 text-primary-foreground scroll-mt-20">
         <div className="mx-auto max-w-6xl px-5">
-          <div className="text-[11px] font-bold uppercase tracking-[0.2em] opacity-80">Support that actually replies</div>
+          <div className="text-[11px] font-bold uppercase tracking-[0.2em] opacity-80">
+            Support that actually replies
+          </div>
           <div className="mt-3 grid gap-8 lg:grid-cols-[1.1fr_1fr] lg:items-center">
             <div>
               <h2 className="font-display text-2xl font-extrabold leading-tight sm:text-3xl">
-                Practice smarter. Analyse every test.<br />Improve every week.
+                Practice smarter. Analyse every test.
+                <br />
+                Improve every week.
               </h2>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 {user ? (
-                  <Button asChild size="lg" className="h-12 rounded-xl bg-white px-6 font-semibold text-primary hover:bg-white/90">
+                  <Button
+                    asChild
+                    size="lg"
+                    className="h-12 rounded-xl bg-white px-6 font-semibold text-primary hover:bg-white/90"
+                  >
                     <Link to="/app">Go to Dashboard</Link>
                   </Button>
                 ) : (
@@ -868,27 +1237,44 @@ function Home() {
                     Start your first CBT test
                   </Button>
                 )}
-                <Button asChild size="lg" variant="outline" className="h-12 rounded-xl border-white/40 bg-transparent px-6 font-semibold text-primary-foreground hover:bg-white/10">
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="h-12 rounded-xl border-white/40 bg-transparent px-6 font-semibold text-primary-foreground hover:bg-white/10"
+                >
                   <a href="#pricing">View plans</a>
                 </Button>
               </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <a href={`mailto:${SUPPORT.email}`}
-                className="flex items-center gap-3 rounded-2xl bg-white/10 p-4 transition hover:bg-white/20">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/15"><Mail className="h-5 w-5" /></span>
+              <a
+                href={`mailto:${SUPPORT.email}`}
+                className="flex items-center gap-3 rounded-2xl bg-white/10 p-4 transition hover:bg-white/20"
+              >
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/15">
+                  <Mail className="h-5 w-5" />
+                </span>
                 <span className="min-w-0">
                   <span className="block text-sm font-bold">Email support</span>
                   <span className="block truncate text-xs opacity-85">{SUPPORT.email}</span>
                 </span>
               </a>
-              <a href={SUPPORT.telegram} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-3 rounded-2xl bg-white/10 p-4 transition hover:bg-white/20">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/15"><Send className="h-5 w-5" /></span>
+              <a
+                href={SUPPORT.telegram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 rounded-2xl bg-white/10 p-4 transition hover:bg-white/20"
+              >
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/15">
+                  <Send className="h-5 w-5" />
+                </span>
                 <span className="min-w-0">
                   <span className="block text-sm font-bold">Telegram channel</span>
-                  <span className="block truncate text-xs opacity-85">{SUPPORT.telegramHandle}</span>
+                  <span className="block truncate text-xs opacity-85">
+                    {SUPPORT.telegramHandle}
+                  </span>
                 </span>
               </a>
             </div>
@@ -904,41 +1290,104 @@ function Home() {
             <p className="mt-3 text-xs leading-relaxed">
               A focused NEET CBT test platform. Practice. Analyse. Improve. Secure your future.
             </p>
-            <a href={SUPPORT.telegram} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline">
+            <a
+              href={SUPPORT.telegram}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+            >
               Join our Telegram channel <ArrowRight className="h-3 w-3" />
             </a>
           </div>
           <div>
-            <div className="text-[11px] font-bold uppercase tracking-wider text-white">Platform</div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-white">
+              Platform
+            </div>
             <ul className="mt-3 space-y-2 text-xs">
-              <li><a href="#pricing" className="hover:text-primary">Plans & Pricing</a></li>
-              <li><a href="#results" className="hover:text-primary">How It Works</a></li>
-              <li><a href="#features" className="hover:text-primary">Features</a></li>
-              <li><Link to="/app/tests" className="hover:text-primary">Test Series</Link></li>
+              <li>
+                <a href="#pricing" className="hover:text-primary">
+                  Plans & Pricing
+                </a>
+              </li>
+              <li>
+                <a href="#results" className="hover:text-primary">
+                  How It Works
+                </a>
+              </li>
+              <li>
+                <a href="#features" className="hover:text-primary">
+                  Features
+                </a>
+              </li>
+              <li>
+                <Link to="/app/tests" className="hover:text-primary">
+                  Test Series
+                </Link>
+              </li>
             </ul>
           </div>
           <div>
             <div className="text-[11px] font-bold uppercase tracking-wider text-white">Company</div>
             <ul className="mt-3 space-y-2 text-xs">
-              <li><Link to="/auth" className="hover:text-primary">Sign in</Link></li>
-              <li><a href={`mailto:${SUPPORT.email}`} className="hover:text-primary">Email support</a></li>
-              <li><a href={SUPPORT.telegram} target="_blank" rel="noopener noreferrer" className="hover:text-primary">Telegram {SUPPORT.telegramHandle}</a></li>
-              <li><a href={`mailto:${SUPPORT.email}`} className="inline-flex items-center gap-1 hover:text-primary"><Mail className="h-3 w-3" />{SUPPORT.email}</a></li>
+              <li>
+                <Link to="/auth" className="hover:text-primary">
+                  Sign in
+                </Link>
+              </li>
+              <li>
+                <a href={`mailto:${SUPPORT.email}`} className="hover:text-primary">
+                  Email support
+                </a>
+              </li>
+              <li>
+                <a
+                  href={SUPPORT.telegram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-primary"
+                >
+                  Telegram {SUPPORT.telegramHandle}
+                </a>
+              </li>
+              <li>
+                <a
+                  href={`mailto:${SUPPORT.email}`}
+                  className="inline-flex items-center gap-1 hover:text-primary"
+                >
+                  <Mail className="h-3 w-3" />
+                  {SUPPORT.email}
+                </a>
+              </li>
             </ul>
           </div>
           <div>
             <div className="text-[11px] font-bold uppercase tracking-wider text-white">Legal</div>
             <ul className="mt-3 space-y-2 text-xs">
-              <li><Link to="/privacy" className="hover:text-primary">Privacy Policy</Link></li>
-              <li><Link to="/terms" className="hover:text-primary">Terms & Conditions</Link></li>
-              <li><Link to="/refund" className="hover:text-primary">Refund Policy</Link></li>
+              <li>
+                <Link to="/privacy" className="hover:text-primary">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link to="/terms" className="hover:text-primary">
+                  Terms & Conditions
+                </Link>
+              </li>
+              <li>
+                <Link to="/refund" className="hover:text-primary">
+                  Refund Policy
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
         <div className="border-t border-white/10 py-4">
           <div className="mx-auto flex max-w-6xl flex-col gap-2 px-5 text-[11px] sm:flex-row sm:items-center sm:justify-between">
             <span>© {new Date().getFullYear()} Testum. Built for NEET aspirants.</span>
-            <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-primary" />Secure payments by Cashfree · No refund policy</span>
+            <span className="inline-flex items-center gap-1.5">
+              <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+              Secure payments by Cashfree · No refund policy
+            </span>
           </div>
         </div>
       </footer>

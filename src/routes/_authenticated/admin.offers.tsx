@@ -111,10 +111,8 @@ function AdminOffers() {
         coupon_code: data.coupon_code || "",
         is_active: !!data.is_active,
         display_frequency:
-          (data.display_frequency as OfferPopupData["display_frequency"]) ||
-          "once_per_session",
-        target_audience:
-          (data.target_audience as OfferPopupData["target_audience"]) || "all",
+          (data.display_frequency as OfferPopupData["display_frequency"]) || "once_per_session",
+        target_audience: (data.target_audience as OfferPopupData["target_audience"]) || "all",
       });
     }
     setLoading(false);
@@ -173,7 +171,7 @@ function AdminOffers() {
       toast.success(
         payload.is_active
           ? "Offer Popup is now LIVE for students!"
-          : "Offer settings saved (Status: Inactive)"
+          : "Offer settings saved (Status: Inactive)",
       );
     } catch (err: any) {
       toast.error("Failed to save offer: " + (err.message || err));
@@ -271,7 +269,8 @@ function AdminOffers() {
             </span>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Configure promotional posters, discount coupons, and clickable offer banners shown to students.
+            Configure promotional posters, discount coupons, and clickable offer banners shown to
+            students.
           </p>
         </div>
 
@@ -299,8 +298,9 @@ function AdminOffers() {
         <div className="space-y-1">
           <p className="font-semibold text-foreground">How the Offer Popup Works</p>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            When enabled, students landing on the dashboard will see a high-impact modal banner popup. 
-            Students can click anywhere on the banner (or on the action button) to navigate directly to your target link (e.g. Plans & Pricing) and copy the coupon code.
+            When enabled, students landing on the dashboard will see a high-impact modal banner
+            popup. Students can click anywhere on the banner (or on the action button) to navigate
+            directly to your target link (e.g. Plans & Pricing) and copy the coupon code.
           </p>
         </div>
       </div>
@@ -325,7 +325,9 @@ function AdminOffers() {
                   onClick={() => applyPreset(p)}
                   className="rounded-xl border bg-secondary/30 p-2.5 text-left text-xs font-medium hover:border-primary/50 hover:bg-secondary transition-all"
                 >
-                  <div className="font-semibold truncate text-foreground">{p.name.split("(")[0]}</div>
+                  <div className="font-semibold truncate text-foreground">
+                    {p.name.split("(")[0]}
+                  </div>
                   <div className="text-[10px] text-muted-foreground truncate">{p.title}</div>
                 </button>
               ))}
@@ -335,10 +337,15 @@ function AdminOffers() {
           {/* Banner Image URL & Upload */}
           <div className="rounded-2xl border bg-card p-5 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
-              <Label htmlFor="image_url" className="text-sm font-semibold flex items-center gap-1.5">
+              <Label
+                htmlFor="image_url"
+                className="text-sm font-semibold flex items-center gap-1.5"
+              >
                 <LinkIcon className="h-4 w-4 text-primary" /> Banner Image Link / URL *
               </Label>
-              <span className="text-xs text-muted-foreground">Portrait (3:4 or 4:5) recommended</span>
+              <span className="text-xs text-muted-foreground">
+                Portrait (3:4 or 4:5) recommended
+              </span>
             </div>
 
             <div className="flex gap-2">
@@ -374,7 +381,8 @@ function AdminOffers() {
             </div>
 
             <p className="text-[11px] text-muted-foreground">
-              You can paste any direct web image URL (Unsplash, Imgur, Cloudinary, AWS S3, Google Drive public link) or click <strong>Upload</strong> to upload directly.
+              You can paste any direct web image URL (Unsplash, Imgur, Cloudinary, AWS S3, Google
+              Drive public link) or click <strong>Upload</strong> to upload directly.
             </p>
           </div>
 
@@ -427,14 +435,19 @@ function AdminOffers() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="coupon_code" className="text-xs font-semibold flex items-center gap-1">
+                <Label
+                  htmlFor="coupon_code"
+                  className="text-xs font-semibold flex items-center gap-1"
+                >
                   <Tag className="h-3.5 w-3.5 text-amber-500" /> Coupon / Promo Code (Optional)
                 </Label>
                 <Input
                   id="coupon_code"
                   placeholder="e.g. RAKHI2000 or FESTIVE50"
                   value={form.coupon_code}
-                  onChange={(e) => setForm((prev) => ({ ...prev, coupon_code: e.target.value.toUpperCase() }))}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, coupon_code: e.target.value.toUpperCase() }))
+                  }
                 />
                 <p className="text-[10px] text-muted-foreground">
                   Displays a 1-click copy badge on the modal.
@@ -612,14 +625,21 @@ function AdminOffers() {
                         {form.coupon_code && (
                           <div className="flex items-center justify-between gap-2 rounded-lg bg-white/10 backdrop-blur-md border border-white/20 px-2.5 py-1 text-xs">
                             <span className="text-[11px] text-slate-200">
-                              Code: <strong className="text-amber-300 font-mono tracking-wider">{form.coupon_code}</strong>
+                              Code:{" "}
+                              <strong className="text-amber-300 font-mono tracking-wider">
+                                {form.coupon_code}
+                              </strong>
                             </span>
                             <button
                               type="button"
                               onClick={copyCoupon}
                               className="inline-flex items-center gap-1 rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-slate-950 hover:bg-amber-300"
                             >
-                              {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                              {copied ? (
+                                <Check className="h-3 w-3" />
+                              ) : (
+                                <Copy className="h-3 w-3" />
+                              )}
                               {copied ? "Copied" : "Copy"}
                             </button>
                           </div>
@@ -652,7 +672,8 @@ function AdminOffers() {
           </div>
 
           <div className="rounded-xl border bg-secondary/20 p-3 text-center text-xs text-muted-foreground">
-            💡 <strong>Tip:</strong> Students can click on the banner poster, button, or copy the coupon directly.
+            💡 <strong>Tip:</strong> Students can click on the banner poster, button, or copy the
+            coupon directly.
           </div>
         </div>
       </div>

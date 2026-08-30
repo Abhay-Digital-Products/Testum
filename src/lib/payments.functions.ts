@@ -80,9 +80,7 @@ export const createCheckout = createServerFn({ method: "POST" })
       userMetadata.name ||
       ((claims as { email?: string })?.email?.split("@")[0] ?? "Testum Student");
     const customerEmail =
-      (claims as { email?: string })?.email ||
-      userMetadata.email ||
-      "student@testum.in";
+      (claims as { email?: string })?.email || userMetadata.email || "student@testum.in";
 
     const cfOrderId = `TESTUM_${data.planCode}_${Date.now()}_${userId.slice(0, 8)}`;
 
@@ -125,11 +123,18 @@ export const createCheckout = createServerFn({ method: "POST" })
       }),
     });
 
-    const body = (await res.json()) as { payment_session_id?: string; message?: string; type?: string };
+    const body = (await res.json()) as {
+      payment_session_id?: string;
+      message?: string;
+      type?: string;
+    };
     if (!res.ok || !body.payment_session_id) {
       console.error("[cashfree] order create failed", res.status, body);
       const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
-      await admin.from("orders").update({ status: "failed", raw: body as never }).eq("id", order.id);
+      await admin
+        .from("orders")
+        .update({ status: "failed", raw: body as never })
+        .eq("id", order.id);
       throw new Error(body.message ?? "Could not start payment. Please try again.");
     }
 

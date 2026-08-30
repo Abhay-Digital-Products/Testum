@@ -5,11 +5,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
-  BookOpen, Layers, Trophy, Crown, Pencil, Loader2,
-  IndianRupee, Clock, ToggleLeft, ToggleRight, ShieldCheck, Check
+  BookOpen,
+  Layers,
+  Trophy,
+  Crown,
+  Pencil,
+  Loader2,
+  IndianRupee,
+  Clock,
+  ToggleLeft,
+  ToggleRight,
+  ShieldCheck,
+  Check,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/plans")({
@@ -18,7 +34,10 @@ export const Route = createFileRoute("/_authenticated/admin/plans")({
 });
 
 const ICONS: Record<string, typeof BookOpen> = {
-  chapter: BookOpen, part: Layers, full: Trophy, combo: Crown,
+  chapter: BookOpen,
+  part: Layers,
+  full: Trophy,
+  combo: Crown,
 };
 const PLAN_COLORS: Record<string, string> = {
   chapter: "bg-blue-500/10 text-blue-600",
@@ -52,27 +71,33 @@ function AdminPlans() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const toggleActive = async (plan: Plan) => {
     setTogglingId(plan.id);
     const nextState = !plan.is_active;
-    
+
     // Optimistic UI update
-    setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, is_active: nextState } : p));
-    
+    setPlans((prev) => prev.map((p) => (p.id === plan.id ? { ...p, is_active: nextState } : p)));
+
     const { error } = await supabase
       .from("plans")
       .update({ is_active: nextState, updated_at: new Date().toISOString() })
       .eq("id", plan.id);
-      
+
     setTogglingId(null);
     if (error) {
       // Revert on error
-      setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, is_active: plan.is_active } : p));
+      setPlans((prev) =>
+        prev.map((p) => (p.id === plan.id ? { ...p, is_active: plan.is_active } : p)),
+      );
       return toast.error("Failed to update status: " + error.message);
     }
-    toast.success(`${plan.title} is now ${nextState ? "Active (visible to students)" : "Inactive (hidden from students)"}`);
+    toast.success(
+      `${plan.title} is now ${nextState ? "Active (visible to students)" : "Inactive (hidden from students)"}`,
+    );
   };
 
   return (
@@ -80,7 +105,8 @@ function AdminPlans() {
       <div>
         <h1 className="font-display text-2xl font-bold sm:text-3xl">Plans & Pricing</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Edit plan prices, descriptions, and active status. Changes reflect instantly on the Home Page, Pricing Page, and Cashfree Gateway amount.
+          Edit plan prices, descriptions, and active status. Changes reflect instantly on the Home
+          Page, Pricing Page, and Cashfree Gateway amount.
         </p>
       </div>
 
@@ -88,10 +114,13 @@ function AdminPlans() {
       <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 text-sm dark:border-emerald-800 dark:bg-emerald-900/20">
         <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
         <div>
-          <p className="font-semibold text-emerald-800 dark:text-emerald-300">Live Dynamic Synchronization</p>
+          <p className="font-semibold text-emerald-800 dark:text-emerald-300">
+            Live Dynamic Synchronization
+          </p>
           <p className="mt-0.5 text-xs text-emerald-700 dark:text-emerald-400 leading-relaxed">
-            Changing the price here automatically updates the student facing UI (Homepage & Pricing page) and the exact charge amount on Cashfree.
-            Toggling a plan off hides it from student purchase options.
+            Changing the price here automatically updates the student facing UI (Homepage & Pricing
+            page) and the exact charge amount on Cashfree. Toggling a plan off hides it from student
+            purchase options.
           </p>
         </div>
       </div>
@@ -124,7 +153,11 @@ function AdminPlans() {
                     <button
                       onClick={() => toggleActive(plan)}
                       disabled={isToggling}
-                      title={plan.is_active ? "Click to deactivate and hide from students" : "Click to activate and show to students"}
+                      title={
+                        plan.is_active
+                          ? "Click to deactivate and hide from students"
+                          : "Click to activate and show to students"
+                      }
                       className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
                         plan.is_active
                           ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border border-emerald-500/20"
@@ -134,9 +167,13 @@ function AdminPlans() {
                       {isToggling ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       ) : plan.is_active ? (
-                        <><ToggleRight className="h-4 w-4 text-emerald-600" /> Active</>
+                        <>
+                          <ToggleRight className="h-4 w-4 text-emerald-600" /> Active
+                        </>
                       ) : (
-                        <><ToggleLeft className="h-4 w-4 text-slate-400" /> Inactive</>
+                        <>
+                          <ToggleLeft className="h-4 w-4 text-slate-400" /> Inactive
+                        </>
                       )}
                     </button>
                     <Button variant="outline" size="sm" onClick={() => setEditing(plan)}>
@@ -157,7 +194,9 @@ function AdminPlans() {
                   </div>
                   <h2 className="mt-1 font-display font-bold text-foreground">{plan.title}</h2>
                   {plan.description && (
-                    <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{plan.description}</p>
+                    <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+                      {plan.description}
+                    </p>
                   )}
                 </div>
 
@@ -171,9 +210,13 @@ function AdminPlans() {
                     <Clock className="h-3.5 w-3.5 text-primary" />
                     Valid: {plan.duration_days} days
                   </span>
-                  <span className={`rounded-md px-2 py-0.5 font-semibold text-[11px] ${
-                    plan.is_active ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-700"
-                  }`}>
+                  <span
+                    className={`rounded-md px-2 py-0.5 font-semibold text-[11px] ${
+                      plan.is_active
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-slate-200 text-slate-700"
+                    }`}
+                  >
                     {plan.is_active ? "Visible to Students" : "Hidden"}
                   </span>
                 </div>
@@ -184,7 +227,14 @@ function AdminPlans() {
       )}
 
       {editing && (
-        <PlanEditDialog plan={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />
+        <PlanEditDialog
+          plan={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            load();
+          }}
+        />
       )}
     </div>
   );
@@ -253,7 +303,11 @@ function PlanEditDialog({
             </div>
             <div>
               <Label className="text-sm font-semibold">
-                Price (₹) <span className="text-xs font-normal text-muted-foreground"> -  updates frontend & Cashfree</span>
+                Price (₹){" "}
+                <span className="text-xs font-normal text-muted-foreground">
+                  {" "}
+                  - updates frontend & Cashfree
+                </span>
               </Label>
               <div className="relative mt-1">
                 <IndianRupee className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -321,7 +375,9 @@ function PlanEditDialog({
           </div>
 
           <DialogFooter className="gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
             <Button type="submit" disabled={busy}>
               {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Changes

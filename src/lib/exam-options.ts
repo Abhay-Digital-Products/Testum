@@ -18,7 +18,8 @@ export function normalizeOptionKey(value: unknown): string | null {
   // Handle object with key/selected_option/value/etc.
   if (typeof value === "object") {
     const obj = value as Record<string, unknown>;
-    const candidate = obj.key ?? obj.selected_option ?? obj.selectedOption ?? obj.option ?? obj.value;
+    const candidate =
+      obj.key ?? obj.selected_option ?? obj.selectedOption ?? obj.option ?? obj.value;
     if (candidate && candidate !== value) {
       const res = normalizeOptionKey(candidate);
       if (res) return res;
@@ -43,7 +44,9 @@ export function normalizeOptionKey(value: unknown): string | null {
   }
 
   // Labeled variants: 'Option A', 'OPTION (A)', 'Choice A', 'Ans: A', 'Option 1', 'Option (1)'
-  const labeled = raw.match(/^(?:OPTION|CHOICE|ANS|ANSWER|KEY)?\s*[:\-.]?\s*\(?\s*([A-D]|[1-4])\s*\)?$/);
+  const labeled = raw.match(
+    /^(?:OPTION|CHOICE|ANS|ANSWER|KEY)?\s*[:\-.]?\s*\(?\s*([A-D]|[1-4])\s*\)?$/,
+  );
   if (labeled) {
     const char = labeled[1];
     if (/^[A-D]$/.test(char)) return char;
@@ -72,7 +75,9 @@ export function normalizeQuestionOptions(options: unknown): NormalizedOption[] {
         typeof option === "object" &&
         option !== null &&
         normalizeOptionKey((option as { key?: unknown }).key) === letter,
-    ) as { key?: string; text?: string; label?: string; value?: string; image_url?: string } | undefined;
+    ) as
+      | { key?: string; text?: string; label?: string; value?: string; image_url?: string }
+      | undefined;
 
     if (keyed) {
       const text =
@@ -140,7 +145,9 @@ export function hasAttemptedAnswer(answer: unknown): boolean {
 
 export function getOptionText(options: unknown, key: string): string {
   const normalized = normalizeQuestionOptions(options);
-  const match = normalized.find((option) => normalizeOptionKey(option.key) === normalizeOptionKey(key));
+  const match = normalized.find(
+    (option) => normalizeOptionKey(option.key) === normalizeOptionKey(key),
+  );
   return match?.text?.trim() || `Option ${key}`;
 }
 
@@ -159,4 +166,3 @@ export function isAnswerCorrect(selected: unknown, correct: unknown): boolean {
 export function normalizeCorrectOption(value: unknown): string | null {
   return normalizeOptionKey(value);
 }
-

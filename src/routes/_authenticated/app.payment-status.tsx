@@ -21,7 +21,11 @@ function PaymentStatus() {
     if (ran.current) return;
     ran.current = true;
     const cfOrderId = new URLSearchParams(window.location.search).get("order_id");
-    if (!cfOrderId) { setState("error"); setMessage("No order reference found."); return; }
+    if (!cfOrderId) {
+      setState("error");
+      setMessage("No order reference found.");
+      return;
+    }
     (async () => {
       try {
         const res = await verify({ data: { cfOrderId } });
@@ -36,23 +40,38 @@ function PaymentStatus() {
   return (
     <div className="mx-auto grid min-h-[60vh] max-w-md place-items-center">
       <div className="w-full rounded-3xl border bg-card p-8 text-center shadow-elegant">
-        {state === "checking" && (<>
-          <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
-          <h1 className="mt-4 font-display text-xl font-bold">Confirming your payment…</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Please don't close this page.</p>
-        </>)}
-        {state === "paid" && (<>
-          <CheckCircle2 className="mx-auto h-12 w-12 text-success" />
-          <h1 className="mt-4 font-display text-xl font-bold">Payment successful 🎉</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Your test series is unlocked.</p>
-          <Button className="mt-6 h-11 w-full" onClick={() => navigate({ to: "/app/tests" })}>Start a test</Button>
-        </>)}
-        {(state === "pending" || state === "error") && (<>
-          <XCircle className="mx-auto h-12 w-12 text-destructive" />
-          <h1 className="mt-4 font-display text-xl font-bold">{state === "pending" ? "Payment not completed" : "Something went wrong"}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{message || "If money was deducted it will reflect within a few minutes, or be refunded automatically."}</p>
-          <Button asChild className="mt-6 h-11 w-full"><Link to="/app/pricing">Back to plans</Link></Button>
-        </>)}
+        {state === "checking" && (
+          <>
+            <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
+            <h1 className="mt-4 font-display text-xl font-bold">Confirming your payment…</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Please don't close this page.</p>
+          </>
+        )}
+        {state === "paid" && (
+          <>
+            <CheckCircle2 className="mx-auto h-12 w-12 text-success" />
+            <h1 className="mt-4 font-display text-xl font-bold">Payment successful 🎉</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Your test series is unlocked.</p>
+            <Button className="mt-6 h-11 w-full" onClick={() => navigate({ to: "/app/tests" })}>
+              Start a test
+            </Button>
+          </>
+        )}
+        {(state === "pending" || state === "error") && (
+          <>
+            <XCircle className="mx-auto h-12 w-12 text-destructive" />
+            <h1 className="mt-4 font-display text-xl font-bold">
+              {state === "pending" ? "Payment not completed" : "Something went wrong"}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {message ||
+                "If money was deducted it will reflect within a few minutes, or be refunded automatically."}
+            </p>
+            <Button asChild className="mt-6 h-11 w-full">
+              <Link to="/app/pricing">Back to plans</Link>
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

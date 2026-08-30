@@ -1,9 +1,22 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -94,7 +107,10 @@ export function AuthForm({
     } catch {
       // ignore
     }
-    const target = redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("/auth") ? redirectTo : "/app";
+    const target =
+      redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("/auth")
+        ? redirectTo
+        : "/app";
     router.navigate({ to: target as any, replace: true });
   };
 
@@ -202,8 +218,12 @@ export function AuthForm({
     <div className="w-full">
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "signin" | "signup")}>
         <TabsList className="grid grid-cols-2 w-full mb-4">
-          <TabsTrigger value="signin" className="text-sm font-medium">Sign in</TabsTrigger>
-          <TabsTrigger value="signup" className="text-sm font-medium">Sign up</TabsTrigger>
+          <TabsTrigger value="signin" className="text-sm font-medium">
+            Sign in
+          </TabsTrigger>
+          <TabsTrigger value="signup" className="text-sm font-medium">
+            Sign up
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="signin" className="mt-0 focus-visible:outline-none">
@@ -256,7 +276,11 @@ export function AuthForm({
               </div>
             </div>
 
-            <Button type="submit" className="w-full h-11 text-base font-semibold shadow-sm" disabled={busy}>
+            <Button
+              type="submit"
+              className="w-full h-11 text-base font-semibold shadow-sm"
+              disabled={busy}
+            >
               {busy ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -308,7 +332,10 @@ export function AuthForm({
 
             <div className="space-y-1.5">
               <Label htmlFor="signup-class">Target Class</Label>
-              <Select value={studentClass} onValueChange={(v) => setStudentClass(v as typeof studentClass)}>
+              <Select
+                value={studentClass}
+                onValueChange={(v) => setStudentClass(v as typeof studentClass)}
+              >
                 <SelectTrigger id="signup-class" className="h-10">
                   <SelectValue placeholder="Select your class" />
                 </SelectTrigger>
@@ -372,7 +399,11 @@ export function AuthForm({
               </div>
             </div>
 
-            <Button type="submit" className="w-full h-11 text-base font-semibold shadow-sm mt-2" disabled={busy}>
+            <Button
+              type="submit"
+              className="w-full h-11 text-base font-semibold shadow-sm mt-2"
+              disabled={busy}
+            >
               {busy ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -426,7 +457,9 @@ export function AuthDialog({
       <DialogContent className="w-[94vw] sm:max-w-md max-h-[90dvh] overflow-y-auto p-5 sm:p-6 rounded-2xl sm:rounded-3xl border shadow-2xl">
         <DialogHeader className="mb-2">
           <DialogTitle className="font-display text-2xl">Welcome to Testum</DialogTitle>
-          <DialogDescription>Sign in or create an account to start your NEET prep.</DialogDescription>
+          <DialogDescription>
+            Sign in or create an account to start your NEET prep.
+          </DialogDescription>
         </DialogHeader>
 
         <AuthForm

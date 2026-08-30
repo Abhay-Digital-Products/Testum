@@ -72,7 +72,7 @@ function Result() {
       const { data: att } = await supabase
         .from("attempts")
         .select(
-          "id, score, correct_count, wrong_count, unattempted_count, time_spent_seconds, submitted_at, tests(id, title, total_questions, marks_correct, marks_wrong, duration_minutes)"
+          "id, score, correct_count, wrong_count, unattempted_count, time_spent_seconds, submitted_at, tests(id, title, total_questions, marks_correct, marks_wrong, duration_minutes)",
         )
         .eq("id", attemptId)
         .maybeSingle();
@@ -109,7 +109,7 @@ function Result() {
         const { data: allQ } = await supabase
           .from("questions")
           .select(
-            "id, order_index, subject, chapter, question_text, question_image_url, option_type, options, correct_option, solution_text, solution_image_url, solution_video_url"
+            "id, order_index, subject, chapter, question_text, question_image_url, option_type, options, correct_option, solution_text, solution_image_url, solution_video_url",
           )
           .eq("test_id", att.tests.id)
           .order("order_index", { ascending: true });
@@ -155,7 +155,9 @@ function Result() {
 
       const sortedRows = merged
         .filter((r: any) => r.questions)
-        .sort((a: any, b: any) => (a.questions?.order_index ?? 0) - (b.questions?.order_index ?? 0));
+        .sort(
+          (a: any, b: any) => (a.questions?.order_index ?? 0) - (b.questions?.order_index ?? 0),
+        );
       setReview(sortedRows);
 
       // Auto-trigger AI analysis if not yet available
@@ -187,8 +189,12 @@ function Result() {
       <div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-9 w-9 animate-spin text-primary" />
-          <p className="font-display font-bold text-foreground text-base">Loading result diagnostics...</p>
-          <p className="text-xs text-muted-foreground">Analyzing scores, solutions, and AI insights...</p>
+          <p className="font-display font-bold text-foreground text-base">
+            Loading result diagnostics...
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Analyzing scores, solutions, and AI insights...
+          </p>
         </div>
       </div>
     );
@@ -215,7 +221,9 @@ function Result() {
 
   const finalCorrect = hasDerived ? derivedCorrect : (attempt?.correct_count ?? derivedCorrect);
   const finalWrong = hasDerived ? derivedWrong : (attempt?.wrong_count ?? derivedWrong);
-  const finalUnattempted = hasDerived ? derivedUnattempted : (attempt?.unattempted_count ?? derivedUnattempted);
+  const finalUnattempted = hasDerived
+    ? derivedUnattempted
+    : (attempt?.unattempted_count ?? derivedUnattempted);
   const finalScore = hasDerived
     ? finalCorrect * marksPerCorrect + finalWrong * marksPerWrong
     : Number(attempt?.score ?? 0);
@@ -229,7 +237,7 @@ function Result() {
 
   // Extract available subject list
   const subjectList = Array.from(
-    new Set(review.map((r: any) => r.questions?.subject).filter(Boolean))
+    new Set(review.map((r: any) => r.questions?.subject).filter(Boolean)),
   );
 
   // Filtered review list
@@ -310,7 +318,7 @@ function Result() {
         },
         (step, percent) => {
           setPdfProgress({ step, percent });
-        }
+        },
       );
       toast.success("Detailed report downloaded successfully");
     } catch (e: any) {
@@ -408,8 +416,8 @@ function Result() {
               {accuracy >= 80
                 ? "🌟 Outstanding Score"
                 : accuracy >= 60
-                ? "🎯 Strong Effort"
-                : "📈 Targeted Focus Needed"}
+                  ? "🎯 Strong Effort"
+                  : "📈 Targeted Focus Needed"}
             </div>
           </div>
         </div>
@@ -467,7 +475,8 @@ function Result() {
             Icon: XCircle,
             l: "Incorrect (-1)",
             v: finalWrong,
-            pts: (finalWrong * marksPerWrong < 0 ? "" : "+") + finalWrong * marksPerWrong + " Marks",
+            pts:
+              (finalWrong * marksPerWrong < 0 ? "" : "+") + finalWrong * marksPerWrong + " Marks",
             status: "wrong" as FilterStatus,
             c: "bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800",
           },
@@ -490,7 +499,7 @@ function Result() {
             className={cn(
               "rounded-2xl border p-4 flex items-center justify-between text-left transition-all hover:scale-[1.01] cursor-pointer",
               c,
-              statusFilter === status && "ring-2 ring-primary ring-offset-2"
+              statusFilter === status && "ring-2 ring-primary ring-offset-2",
             )}
           >
             <div className="flex items-center gap-3">
@@ -515,7 +524,7 @@ function Result() {
             "rounded-xl px-4 py-2 text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2",
             activeTab === "review"
               ? "bg-primary text-primary-foreground shadow-xs"
-              : "bg-secondary text-muted-foreground hover:text-foreground"
+              : "bg-secondary text-muted-foreground hover:text-foreground",
           )}
         >
           <Target className="h-4 w-4" />
@@ -528,7 +537,7 @@ function Result() {
             "rounded-xl px-4 py-2 text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2",
             activeTab === "diagnostics"
               ? "bg-primary text-primary-foreground shadow-xs"
-              : "bg-secondary text-muted-foreground hover:text-foreground"
+              : "bg-secondary text-muted-foreground hover:text-foreground",
           )}
         >
           <TrendingUp className="h-4 w-4" />
@@ -541,7 +550,7 @@ function Result() {
             "rounded-xl px-4 py-2 text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2",
             activeTab === "ai_plan"
               ? "bg-primary text-primary-foreground shadow-xs"
-              : "bg-secondary text-muted-foreground hover:text-foreground"
+              : "bg-secondary text-muted-foreground hover:text-foreground",
           )}
         >
           <Sparkles className="h-4 w-4" />
@@ -562,7 +571,8 @@ function Result() {
                   <BookOpen className="h-5 w-5 text-primary" /> Question-by-Question Review
                 </h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Verify your selections against the official answer keys and step-by-step solutions.
+                  Verify your selections against the official answer keys and step-by-step
+                  solutions.
                 </p>
               </div>
 
@@ -575,7 +585,11 @@ function Result() {
               >
                 <LayoutGrid className="h-4 w-4 text-primary" />
                 <span>Question Palette</span>
-                {showPalette ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
+                {showPalette ? (
+                  <ChevronUp className="h-4 w-4 ml-1" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 ml-1" />
+                )}
               </Button>
             </div>
 
@@ -586,13 +600,16 @@ function Result() {
                   <span>Click any question number to jump directly:</span>
                   <div className="flex items-center gap-3 text-[11px]">
                     <span className="flex items-center gap-1 text-emerald-600 font-bold">
-                      <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 inline-block" /> Correct
+                      <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 inline-block" />{" "}
+                      Correct
                     </span>
                     <span className="flex items-center gap-1 text-rose-600 font-bold">
-                      <span className="h-2.5 w-2.5 rounded-full bg-rose-500 inline-block" /> Incorrect
+                      <span className="h-2.5 w-2.5 rounded-full bg-rose-500 inline-block" />{" "}
+                      Incorrect
                     </span>
                     <span className="flex items-center gap-1 text-slate-500 font-bold">
-                      <span className="h-2.5 w-2.5 rounded-full bg-slate-400 inline-block" /> Skipped
+                      <span className="h-2.5 w-2.5 rounded-full bg-slate-400 inline-block" />{" "}
+                      Skipped
                     </span>
                   </div>
                 </div>
@@ -606,7 +623,8 @@ function Result() {
                     let colorCls =
                       "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300";
                     if (isCorr) {
-                      colorCls = "bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-2xs";
+                      colorCls =
+                        "bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-2xs";
                     } else if (isWrn) {
                       colorCls = "bg-rose-600 text-white font-bold hover:bg-rose-700 shadow-2xs";
                     }
@@ -618,7 +636,7 @@ function Result() {
                         onClick={() => scrollToQuestion(q.order_index)}
                         className={cn(
                           "h-8 rounded-lg text-xs font-bold transition-all flex items-center justify-center border cursor-pointer",
-                          colorCls
+                          colorCls,
                         )}
                         title={`Q${q.order_index} (${q.subject})`}
                       >
@@ -644,7 +662,7 @@ function Result() {
                     "rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer",
                     statusFilter === "all"
                       ? "bg-primary text-primary-foreground shadow-xs"
-                      : "bg-background text-muted-foreground hover:text-foreground border"
+                      : "bg-background text-muted-foreground hover:text-foreground border",
                   )}
                 >
                   All ({review.length})
@@ -657,7 +675,7 @@ function Result() {
                     "rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",
                     statusFilter === "wrong"
                       ? "bg-rose-600 text-white shadow-xs"
-                      : "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-900"
+                      : "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-900",
                   )}
                 >
                   <span>✗ Mistakes</span>
@@ -673,7 +691,7 @@ function Result() {
                     "rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",
                     statusFilter === "correct"
                       ? "bg-emerald-600 text-white shadow-xs"
-                      : "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-900"
+                      : "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-900",
                   )}
                 >
                   <span>✓ Correct</span>
@@ -689,7 +707,7 @@ function Result() {
                     "rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",
                     statusFilter === "unattempted"
                       ? "bg-slate-700 text-white shadow-xs"
-                      : "bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
+                      : "bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700",
                   )}
                 >
                   <span>— Skipped</span>
@@ -710,7 +728,7 @@ function Result() {
                         "rounded-xl px-2.5 py-1 text-xs font-semibold transition-all shrink-0 cursor-pointer",
                         subjectFilter === "all"
                           ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
-                          : "bg-background text-muted-foreground hover:text-foreground border"
+                          : "bg-background text-muted-foreground hover:text-foreground border",
                       )}
                     >
                       All Sections
@@ -724,7 +742,7 @@ function Result() {
                           "rounded-xl px-2.5 py-1 text-xs font-semibold capitalize transition-all shrink-0 cursor-pointer",
                           subjectFilter === s
                             ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
-                            : "bg-background text-muted-foreground hover:text-foreground border"
+                            : "bg-background text-muted-foreground hover:text-foreground border",
                         )}
                       >
                         {s}
@@ -796,8 +814,8 @@ function Result() {
                       isCorrect
                         ? "border-emerald-300 dark:border-emerald-900/60"
                         : isWrong
-                        ? "border-rose-300 dark:border-rose-900/60"
-                        : "border-border"
+                          ? "border-rose-300 dark:border-rose-900/60"
+                          : "border-border",
                     )}
                   >
                     {/* Question Header */}
@@ -807,8 +825,8 @@ function Result() {
                         isCorrect
                           ? "bg-emerald-50/60 dark:bg-emerald-950/20"
                           : isWrong
-                          ? "bg-rose-50/60 dark:bg-rose-950/20"
-                          : "bg-muted/40"
+                            ? "bg-rose-50/60 dark:bg-rose-950/20"
+                            : "bg-muted/40",
                       )}
                     >
                       <div className="flex items-center gap-2.5 flex-wrap">
@@ -885,10 +903,10 @@ function Result() {
                                   isCorrectOpt && isStudentOpt
                                     ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 ring-2 ring-emerald-500/30 font-semibold"
                                     : isCorrectOpt
-                                    ? "border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/30 ring-1 ring-emerald-500/30 font-semibold"
-                                    : isWrongStudentOpt
-                                    ? "border-rose-500 bg-rose-50 dark:bg-rose-950/40 ring-2 ring-rose-500/30"
-                                    : "border-border bg-background"
+                                      ? "border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/30 ring-1 ring-emerald-500/30 font-semibold"
+                                      : isWrongStudentOpt
+                                        ? "border-rose-500 bg-rose-50 dark:bg-rose-950/40 ring-2 ring-rose-500/30"
+                                        : "border-border bg-background",
                                 )}
                               >
                                 <span
@@ -897,8 +915,8 @@ function Result() {
                                     isCorrectOpt
                                       ? "bg-emerald-600 text-white border-emerald-600 shadow-2xs"
                                       : isWrongStudentOpt
-                                      ? "bg-rose-600 text-white border-rose-600 shadow-2xs"
-                                      : "bg-secondary text-foreground"
+                                        ? "bg-rose-600 text-white border-rose-600 shadow-2xs"
+                                        : "bg-secondary text-foreground",
                                   )}
                                 >
                                   {op.key}
@@ -946,8 +964,8 @@ function Result() {
                           isCorrect
                             ? "border-emerald-200 bg-emerald-50/40 dark:border-emerald-900/50 dark:bg-emerald-950/10"
                             : isWrong
-                            ? "border-rose-200 bg-rose-50/40 dark:border-rose-900/50 dark:bg-rose-950/10"
-                            : "border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/30"
+                              ? "border-rose-200 bg-rose-50/40 dark:border-rose-900/50 dark:bg-rose-950/10"
+                              : "border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/30",
                         )}
                       >
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -958,10 +976,10 @@ function Result() {
                               item.selected_option && isWrong
                                 ? "border-rose-200 bg-rose-100/30 dark:border-rose-900/40 dark:bg-rose-950/20"
                                 : item.selected_option
-                                ? "border-emerald-200 bg-emerald-100/30 dark:border-emerald-900/40 dark:bg-emerald-950/20"
-                                : item.selected_option_lost
-                                ? "border-amber-200 bg-amber-50/40 dark:border-amber-900/40 dark:bg-amber-950/10"
-                                : "border-slate-200 bg-slate-100/30 dark:border-slate-800 dark:bg-slate-900/20"
+                                  ? "border-emerald-200 bg-emerald-100/30 dark:border-emerald-900/40 dark:bg-emerald-950/20"
+                                  : item.selected_option_lost
+                                    ? "border-amber-200 bg-amber-50/40 dark:border-amber-900/40 dark:bg-amber-950/10"
+                                    : "border-slate-200 bg-slate-100/30 dark:border-slate-800 dark:bg-slate-900/20",
                             )}
                           >
                             <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -1057,7 +1075,9 @@ function Result() {
             <div className="rounded-3xl border bg-card p-5 sm:p-6 shadow-xs space-y-4">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-primary" />
-                <h2 className="font-display text-lg font-bold">Subject-Wise Performance Breakdown</h2>
+                <h2 className="font-display text-lg font-bold">
+                  Subject-Wise Performance Breakdown
+                </h2>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
                 {Object.entries(subjects).map(([s, v]: any) => {
@@ -1066,14 +1086,20 @@ function Result() {
                   return (
                     <div key={s} className="rounded-2xl border p-4 bg-muted/20 space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="font-display font-bold capitalize text-foreground">{s}</span>
+                        <span className="font-display font-bold capitalize text-foreground">
+                          {s}
+                        </span>
                         <span className="font-bold text-sm text-primary">{acc}% Accuracy</span>
                       </div>
                       <div className="h-2 overflow-hidden rounded-full bg-secondary">
                         <div
                           className={cn(
                             "h-full rounded-full transition-all duration-500",
-                            acc >= 75 ? "bg-emerald-500" : acc >= 50 ? "bg-amber-500" : "bg-rose-500"
+                            acc >= 75
+                              ? "bg-emerald-500"
+                              : acc >= 50
+                                ? "bg-amber-500"
+                                : "bg-rose-500",
                           )}
                           style={{ width: `${acc}%` }}
                         />
@@ -1118,7 +1144,9 @@ function Result() {
                           <td className="py-3 text-right font-semibold text-emerald-600">
                             +{v.correct}
                           </td>
-                          <td className="py-3 text-right font-semibold text-rose-600">-{v.wrong}</td>
+                          <td className="py-3 text-right font-semibold text-rose-600">
+                            -{v.wrong}
+                          </td>
                           <td className="py-3 text-right text-muted-foreground">{v.unattempted}</td>
                           <td className="py-3 text-right font-bold text-foreground">{acc}%</td>
                         </tr>
@@ -1248,12 +1276,7 @@ function Result() {
             <div className="mt-3 flex items-center justify-between pt-2 border-t text-xs">
               <span className="text-muted-foreground font-medium">Question Image Preview</span>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  asChild
-                  className="h-8 rounded-xl text-xs"
-                >
+                <Button variant="outline" size="sm" asChild className="h-8 rounded-xl text-xs">
                   <a href={zoomImage} target="_blank" rel="noopener noreferrer">
                     Open in New Tab
                   </a>
