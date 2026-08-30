@@ -1,6 +1,15 @@
 import jsPDF from "jspdf";
 import logoAsset from "@/assets/testum-logo.png.asset.json";
 import { fetchImageBase64 } from "@/lib/image-proxy.functions";
+import {
+  getOptionText,
+  hasAttemptedAnswer,
+  isAnswerCorrect,
+  isOptionSelected,
+  normalizeCorrectOption,
+  normalizeOptionKey,
+  normalizeQuestionOptions,
+} from "@/lib/exam-options";
 
 /* ─── Types ──────────────────────────────────────────── */
 type RGB = [number, number, number];
@@ -33,6 +42,8 @@ export type ResultPdfInput = {
   correct: number;
   wrong: number;
   unattempted: number;
+  marksCorrect?: number;
+  marksWrong?: number;
   timeSpentSeconds: number;
   durationMinutes: number;
   subjects: Record<string, Stat>;
@@ -44,9 +55,11 @@ export type ResultPdfInput = {
   questions?: QuestionReview[];
 };
 
-/* ─── Brand Palette (matches site theme exactly) ─────── */
+export type PdfProgressCallback = (step: string, percent: number) => void;
+
+/* ─── Brand Palette (Matches site theme exactly) ─────── */
 const PRIMARY: RGB    = [37,  99,  235]; // Royal Blue #2563EB
-const PRIMARY_L: RGB  = [79, 140, 255]; // Lighter blue for gradients
+const PRIMARY_L: RGB  = [79, 140, 255]; // Lighter blue for accents
 const DARK: RGB       = [15,  23,  42];  // Slate 900
 const GREY: RGB       = [100, 116, 139]; // Slate 500
 const GREY_L: RGB     = [148, 163, 184]; // Slate 400
@@ -67,43 +80,8 @@ const WHITE: RGB      = [255, 255, 255];
 /* ─── High-Performance Parallel Image Loader & Cache ───────── */
 type LoadedImage = { data: string; w: number; h: number; format: string };
 const globalImageCache = new Map<string, LoadedImage>();
-const MAX_PDF_IMAGES = 24;
 
-function normalizeOptionKey(value: unknown): string | null {
-  if (value === null || value === undefined) return null;
-  const text = String(value).trim();
-  if (!text) return null;
-  const matched = text.match(/[A-D]/i);
-  return matched ? matched[0].toUpperCase() : null;
-}
-
-function extractSelectedOption(answer: any): string | null {
-  const candidates = [
-    answer?.selected_option,
-    answer?.selectedOption,
-    answer?.option_key,
-    answer?.optionKey,
-    answer?.answer,
-    answer?.user_answer,
-    answer?.answer_option,
-    answer?.choice,
-  ];
-
-  for (const candidate of candidates) {
-    const normalized = normalizeOptionKey(candidate);
-    if (normalized) return normalized;
-  }
-
-  return null;
-}
-
-function hasAttemptedAnswer(question: QuestionReview): boolean {
-  const selected = normalizeOptionKey(question.selected_option);
-  if (selected) return true;
-  return question.is_correct !== null && question.is_correct !== undefined;
-}
-
-async function fetchSingleImageWithTimeout(url: string, timeoutMs = 1800): Promise<LoadedImage | null> {
+async function fetchSingleImageWithTimeout(url: string, timeoutMs = 2400): Promise<LoadedImage | null> {
   if (!url || typeof url !== "string") return null;
   if (globalImageCache.has(url)) return globalImageCache.get(url)!;
 
@@ -120,14 +98,16 @@ async function fetchSingleImageWithTimeout(url: string, timeoutMs = 1800): Promi
             const w = img.naturalWidth || 600;
             const h = img.naturalHeight || 400;
             const canvas = document.createElement("canvas");
-            canvas.width = Math.min(w, 680);
-            canvas.height = Math.round((h / w) * canvas.width) || h;
+            const targetW = Math.min(w, 680);
+            const targetH = Math.round((h / w) * targetW) || h;
+            canvas.width = targetW;
+            canvas.height = targetH;
             const ctx = canvas.getContext("2d");
             if (ctx) {
               ctx.fillStyle = "#ffffff";
               ctx.fillRect(0, 0, canvas.width, canvas.height);
               ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-              const jpeg = canvas.toDataURL("image/jpeg", 0.85);
+              const jpeg = canvas.toDataURL("image/jpeg", 0.82);
               resolve({ data: jpeg, w: canvas.width, h: canvas.height, format: "JPEG" });
               return;
             }
@@ -145,7 +125,7 @@ async function fetchSingleImageWithTimeout(url: string, timeoutMs = 1800): Promi
     // 2. Direct fetch with AbortController
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 1800);
+      const timer = setTimeout(() => controller.abort(), 2000);
       const res = await fetch(url, { mode: "cors", signal: controller.signal });
       clearTimeout(timer);
       if (res.ok) {
@@ -193,12 +173,19 @@ async function fetchSingleImageWithTimeout(url: string, timeoutMs = 1800): Promi
 }
 
 /**
- * Prefetches all test images in parallel batches with concurrency control
+ * Prefetches all test images in parallel batches with progress notification
  */
-async function prefetchAllImages(urls: string[]): Promise<Map<string, LoadedImage>> {
+async function prefetchAllImages(
+  urls: string[],
+  onProgress?: PdfProgressCallback
+): Promise<Map<string, LoadedImage>> {
   const uniqueUrls = Array.from(new Set(urls.filter((u) => Boolean(u) && typeof u === "string")));
   const results = new Map<string, LoadedImage>();
-  const concurrency = 12;
+  const total = uniqueUrls.length;
+  if (total === 0) return results;
+
+  const concurrency = 16;
+  let completed = 0;
 
   for (let i = 0; i < uniqueUrls.length; i += concurrency) {
     const chunk = uniqueUrls.slice(i, i + concurrency);
@@ -211,14 +198,24 @@ async function prefetchAllImages(urls: string[]): Promise<Map<string, LoadedImag
     for (const item of loadedChunk) {
       if (item.img) results.set(item.url, item.img);
     }
+    completed += chunk.length;
+    if (onProgress) {
+      const percent = Math.min(80, Math.round((completed / total) * 80));
+      onProgress(`Downloading images (${Math.min(completed, total)}/${total})...`, percent);
+    }
   }
 
   return results;
 }
 
-/* ─── Main PDF Function ───────────────────────────────── */
-export async function downloadResultPdf(input: ResultPdfInput) {
-  // 1. Collect all unique image URLs upfront for parallel prefetching, but cap the count to keep PDF generation responsive.
+/* ─── Main PDF Generator ──────────────────────────────── */
+export async function downloadResultPdf(
+  input: ResultPdfInput,
+  onProgress?: PdfProgressCallback
+) {
+  if (onProgress) onProgress("Preparing exam data...", 5);
+
+  // 1. Collect all unique image URLs upfront (no limit cap so all questions are included)
   const allUrls: string[] = [];
   if (logoAsset?.url) allUrls.push(logoAsset.url);
 
@@ -232,14 +229,15 @@ export async function downloadResultPdf(input: ResultPdfInput) {
     }
   }
 
-  const uniqueUrls = Array.from(new Set(allUrls.filter(Boolean))).slice(0, MAX_PDF_IMAGES);
-  const imageMap = await prefetchAllImages(uniqueUrls);
+  const imageMap = await prefetchAllImages(allUrls, onProgress);
   const logo = logoAsset?.url ? imageMap.get(logoAsset.url) ?? null : null;
 
+  if (onProgress) onProgress("Generating PDF report...", 85);
+
   const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const W = doc.internal.pageSize.getWidth();  // 595.28
-  const H = doc.internal.pageSize.getHeight(); // 841.89
-  const M = 36;
+  const W = doc.internal.pageSize.getWidth();  // 595.28 pt
+  const H = doc.internal.pageSize.getHeight(); // 841.89 pt
+  const M = 36; // Margins
   let y = 0;
 
   /* Ensure enough space remains on page; otherwise add new page */
@@ -247,11 +245,11 @@ export async function downloadResultPdf(input: ResultPdfInput) {
     if (y + need > H - 52) {
       doc.addPage();
       drawPageBg();
-      y = M + 10;
+      y = M + 12;
     }
   };
 
-  /* Subtle off-white background every page */
+  /* Subtle off-white background on every page */
   const drawPageBg = () => {
     doc.setFillColor(252, 253, 255);
     doc.rect(0, 0, W, H, "F");
@@ -259,17 +257,17 @@ export async function downloadResultPdf(input: ResultPdfInput) {
 
   drawPageBg();
 
-  /* ── 1. HEADER BANNER ───────────────────────────────── */
+  /* ── 1. HEADER BANNER (Page 1) ────────────────────────── */
   doc.setFillColor(...PRIMARY);
   doc.rect(0, 0, W, 88, "F");
   doc.setFillColor(...PRIMARY_L);
-  doc.setGState(doc.GState({ opacity: 0.18 }));
+  doc.setGState(doc.GState({ opacity: 0.2 }));
   doc.rect(W * 0.55, 0, W * 0.45, 88, "F");
   doc.setGState(doc.GState({ opacity: 1 }));
 
-  // Decorative circle accents
+  // Decorative accents
   doc.setFillColor(...WHITE);
-  doc.setGState(doc.GState({ opacity: 0.07 }));
+  doc.setGState(doc.GState({ opacity: 0.08 }));
   doc.circle(W - 30, -10, 80, "F");
   doc.circle(W - 80, 60, 50, "F");
   doc.setGState(doc.GState({ opacity: 1 }));
@@ -287,22 +285,22 @@ export async function downloadResultPdf(input: ResultPdfInput) {
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.setTextColor(199, 220, 255);
+  doc.setTextColor(205, 225, 255);
   doc.text("Official Performance & Diagnostic Analysis Report", txtX, 55);
 
   doc.setFontSize(7.5);
-  doc.setTextColor(179, 206, 255);
+  doc.setTextColor(185, 210, 255);
   doc.text("Generated: " + new Date(input.submittedAt || Date.now()).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }), W - M, 42, { align: "right" });
-  doc.text("testum.in  ·  NEET Exam Simulation", W - M, 56, { align: "right" });
+  doc.text("testum.in  ·  NEET CBT Exam Simulation", W - M, 56, { align: "right" });
 
-  y = 105;
+  y = 104;
 
   /* ── 2. TEST & STUDENT CARD ─────────────────────────── */
   doc.setFillColor(...WHITE);
   doc.setDrawColor(...BORDER);
   doc.roundedRect(M, y, W - M * 2, 54, 8, 8, "FD");
 
-  // Left color accent bar
+  // Left blue accent bar
   doc.setFillColor(...PRIMARY);
   doc.roundedRect(M, y, 5, 54, 4, 4, "F");
 
@@ -324,28 +322,37 @@ export async function downloadResultPdf(input: ResultPdfInput) {
 
   /* ── 3. PRIMARY METRIC CARDS ────────────────────────── */
   const computedCorrect = (input.questions ?? []).filter((q) => {
-    const attempted = hasAttemptedAnswer(q);
-    if (!attempted) return false;
-    const s = normalizeOptionKey(q.selected_option) ?? normalizeOptionKey(q.correct_option);
-    const c = normalizeOptionKey(q.correct_option) ?? "";
-    return q.is_correct === true || s === c;
+    if (!hasAttemptedAnswer(q)) return false;
+    if (q.is_correct === true) return true;
+    const selected = normalizeOptionKey(q.selected_option);
+    const correct = normalizeCorrectOption(q.correct_option);
+    return Boolean(selected && correct && selected === correct);
   }).length;
 
   const computedWrong = (input.questions ?? []).filter((q) => {
-    const attempted = hasAttemptedAnswer(q);
-    if (!attempted) return false;
-    const s = normalizeOptionKey(q.selected_option) ?? normalizeOptionKey(q.correct_option);
-    const c = normalizeOptionKey(q.correct_option) ?? "";
-    return q.is_correct === false || (s !== null && !(q.is_correct === true || s === c));
+    if (!hasAttemptedAnswer(q)) return false;
+    if (q.is_correct === false) return true;
+    const selected = normalizeOptionKey(q.selected_option);
+    const correct = normalizeCorrectOption(q.correct_option);
+    return Boolean(selected && correct && selected !== correct);
   }).length;
 
-  const computedUnattempted = (input.questions ?? []).length - computedCorrect - computedWrong;
-  const useComputed = input.correct === 0 && input.wrong === 0 && (computedCorrect > 0 || computedWrong > 0);
+  const computedUnattempted = (input.questions ?? []).filter((q) => !hasAttemptedAnswer(q)).length;
+  const storedAttempted = input.correct + input.wrong;
+  const derivedAttempted = computedCorrect + computedWrong;
+  const useComputed =
+    (input.questions?.length ?? 0) > 0 &&
+    (derivedAttempted > storedAttempted ||
+      (input.correct === 0 && input.wrong === 0 && derivedAttempted > 0));
 
+  const marksCorrect = input.marksCorrect ?? 4;
+  const marksWrong = input.marksWrong ?? -1;
   const finalCorrect = useComputed ? computedCorrect : input.correct;
   const finalWrong = useComputed ? computedWrong : input.wrong;
   const finalUnattempted = useComputed ? computedUnattempted : input.unattempted;
-  const finalScore = useComputed ? (finalCorrect * 4 - finalWrong * 1) : input.score;
+  const finalScore = useComputed
+    ? finalCorrect * marksCorrect + finalWrong * marksWrong
+    : input.score;
 
   const attempted = finalCorrect + finalWrong;
   const accuracy = attempted ? Math.round((finalCorrect / attempted) * 100) : 0;
@@ -353,10 +360,10 @@ export async function downloadResultPdf(input: ResultPdfInput) {
   const minSpent  = Math.floor(input.timeSpentSeconds / 60);
 
   const metrics: Array<{ label: string; value: string; sub: string; color: RGB; accentBg: RGB }> = [
-    { label: "FINAL SCORE",      value: `${Math.round(finalScore)}/${input.totalMax}`, sub: `${percent}% of max`,               color: PRIMARY, accentBg: INDIGO_BG },
-    { label: "ACCURACY",         value: `${accuracy}%`,                                 sub: `${finalCorrect}/${attempted} att.`, color: accuracy >= 75 ? GREEN : accuracy >= 50 ? AMBER : RED, accentBg: accuracy >= 75 ? GREEN_BG : accuracy >= 50 ? AMBER_BG : RED_BG },
+    { label: "FINAL SCORE",      value: `${Math.round(finalScore)}/${input.totalMax}`, sub: `${percent}% of maximum`,           color: PRIMARY, accentBg: INDIGO_BG },
+    { label: "ACCURACY RATE",    value: `${accuracy}%`,                                 sub: `${finalCorrect}/${attempted} correct`, color: accuracy >= 75 ? GREEN : accuracy >= 50 ? AMBER : RED, accentBg: accuracy >= 75 ? GREEN_BG : accuracy >= 50 ? AMBER_BG : RED_BG },
     { label: "TIME USED",        value: `${minSpent} min`,                               sub: `of ${input.durationMinutes} min`,   color: DARK, accentBg: LIGHT_BG },
-    { label: "ATTEMPT RATE",     value: `${attempted}/${attempted + finalUnattempted}`, sub: `${finalUnattempted} skipped`,      color: DARK, accentBg: LIGHT_BG },
+    { label: "ATTEMPT RATIO",    value: `${attempted}/${attempted + finalUnattempted}`, sub: `${finalUnattempted} skipped`,      color: DARK, accentBg: LIGHT_BG },
   ];
 
   const mw = (W - M * 2 - 15) / 4;
@@ -390,9 +397,9 @@ export async function downloadResultPdf(input: ResultPdfInput) {
   /* ── 4. ANSWER BREAKDOWN ROW ────────────────────────── */
   const bw = (W - M * 2 - 10) / 3;
   const breakdown = [
-    { label: "CORRECT",      count: finalCorrect,     score: `+${finalCorrect * 4} Marks`,   color: GREEN, bg: GREEN_BG, border: GREEN },
-    { label: "INCORRECT",    count: finalWrong,       score: `-${finalWrong} Marks`,          color: RED,   bg: RED_BG,   border: RED },
-    { label: "UNATTEMPTED",  count: finalUnattempted, score: "0 Marks",                        color: GREY,  bg: LIGHT_BG, border: BORDER },
+    { label: "CORRECT ANSWERS",  count: finalCorrect,     score: `+${finalCorrect * marksCorrect} Marks`,   color: GREEN, bg: GREEN_BG, border: GREEN },
+    { label: "INCORRECT ANSWERS", count: finalWrong,       score: `${finalWrong * marksWrong < 0 ? "" : "+"}${finalWrong * marksWrong} Marks`, color: RED,   bg: RED_BG,   border: RED },
+    { label: "SKIPPED / UNATTEMPTED", count: finalUnattempted, score: "0 Marks",                        color: GREY,  bg: LIGHT_BG, border: BORDER },
   ];
 
   breakdown.forEach((b, i) => {
@@ -422,7 +429,7 @@ export async function downloadResultPdf(input: ResultPdfInput) {
     doc.setFillColor(...color);
     doc.roundedRect(M, y - 2, 4, 18, 2, 2, "F");
     doc.setFillColor(color[0], color[1], color[2]);
-    doc.setGState(doc.GState({ opacity: 0.06 }));
+    doc.setGState(doc.GState({ opacity: 0.07 }));
     doc.rect(M, y - 2, W - M * 2, 18, "F");
     doc.setGState(doc.GState({ opacity: 1 }));
 
@@ -449,7 +456,7 @@ export async function downloadResultPdf(input: ResultPdfInput) {
 
   /* ── Helper: Progress bar ───────────────────────────── */
   const progressBar = (x: number, barY: number, barW: number, val: number, total: number, color: RGB) => {
-    const pct = total ? val / total : 0;
+    const pct = total ? Math.min(1, Math.max(0, val / total)) : 0;
     doc.setFillColor(...BORDER);
     doc.roundedRect(x, barY, barW, 5, 2.5, 2.5, "F");
     if (pct > 0) {
@@ -460,7 +467,7 @@ export async function downloadResultPdf(input: ResultPdfInput) {
 
   /* ── 5. AI ANALYSIS SECTION ─────────────────────────── */
   if (input.aiSummary || input.studyPlan || (input.weakTopics?.length ?? 0) > 0) {
-    heading("AI Performance Analysis & Recommendations");
+    heading("AI Diagnostic Analysis & Recommendations");
 
     if (input.aiSummary) {
       const lines = doc.splitTextToSize(input.aiSummary, W - M * 2 - 24);
@@ -508,7 +515,7 @@ export async function downloadResultPdf(input: ResultPdfInput) {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(7.5);
       doc.setTextColor(...RED);
-      doc.text("FOCUS AREAS  (Low Accuracy)", M + 10, y + 14);
+      doc.text("FOCUS AREAS (Low Accuracy)", M + 10, y + 14);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(7.5);
       doc.setTextColor(...DARK);
@@ -525,7 +532,7 @@ export async function downloadResultPdf(input: ResultPdfInput) {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(7.5);
       doc.setTextColor(...GREEN);
-      doc.text("MASTERED TOPICS  (Strong)", sx + 10, y + 14);
+      doc.text("MASTERED TOPICS (Strong)", sx + 10, y + 14);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(7.5);
       doc.setTextColor(...DARK);
@@ -546,7 +553,7 @@ export async function downloadResultPdf(input: ResultPdfInput) {
       doc.setFontSize(8);
       doc.setTextColor(...DARK);
       for (const line of input.studyPlan.split("\n")) {
-        if (line.trim()) paragraph("• " + line.trim(), 10);
+        if (line.trim()) paragraph("• " + line.trim().replace(/^[•\s-]+/, ""), 10);
       }
       y += 6;
     }
@@ -662,7 +669,7 @@ export async function downloadResultPdf(input: ResultPdfInput) {
     y += 10;
   }
 
-  /* ── 8. QUESTION-BY-QUESTION REVIEW ─────────────────── */
+  /* ── 8. QUESTION-BY-QUESTION REVIEW (ALL QUESTIONS) ─── */
   const qs = (input.questions ?? []).slice().sort((a, b) => a.order_index - b.order_index);
 
   if (qs.length > 0) {
@@ -671,24 +678,25 @@ export async function downloadResultPdf(input: ResultPdfInput) {
 
     doc.setFontSize(8);
     doc.setTextColor(...GREY);
-    paragraph(`All ${qs.length} questions with question images, your response, verified correct options, and step-by-step explanations.`);
+    paragraph(`Complete review of all ${qs.length} questions including question diagrams, your response, verified correct answer, and step-by-step solutions.`);
 
-    for (const q of qs) {
+    for (let qIdx = 0; qIdx < qs.length; qIdx++) {
+      const q = qs[qIdx];
       const selected = normalizeOptionKey(q.selected_option);
-      const correctOpt = normalizeOptionKey(q.correct_option) ?? "";
+      const correctOpt = normalizeCorrectOption(q.correct_option) ?? "";
       const hasAttempted = hasAttemptedAnswer(q);
       const isSkipped  = !hasAttempted;
-      const isCorrect  = hasAttempted && (q.is_correct === true || (!!selected && selected === correctOpt));
+      const isCorrect  = hasAttempted && (q.is_correct === true || isAnswerCorrect(selected, correctOpt));
       const isWrong    = hasAttempted && !isCorrect;
       const statusColor: RGB = isCorrect ? GREEN : isWrong ? RED : GREY;
-      const statusLabel      = isCorrect ? "CORRECT  (+4)" : isWrong ? "WRONG  (-1)" : "NOT ATTEMPTED  (0)";
+      const statusLabel      = isCorrect ? `CORRECT (+${marksCorrect})` : isWrong ? `WRONG (${marksWrong})` : "NOT ATTEMPTED (0)";
       const timeStr          = q.time_spent_seconds && q.time_spent_seconds > 0
         ? `${Math.floor(q.time_spent_seconds / 60)}m ${q.time_spent_seconds % 60}s`
         : "—";
 
-      ensure(80);
+      ensure(90);
 
-      /* ── Q Header strip ── */
+      /* ── Question Header Strip ── */
       doc.setFillColor(...statusColor);
       doc.setGState(doc.GState({ opacity: 0.09 }));
       doc.roundedRect(M, y - 6, W - M * 2, 26, 5, 5, "F");
@@ -697,7 +705,7 @@ export async function downloadResultPdf(input: ResultPdfInput) {
       doc.setFillColor(...statusColor);
       doc.roundedRect(M, y - 6, 5, 26, 4, 4, "F");
 
-      // Q number
+      // Q Number
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9.5);
       doc.setTextColor(...DARK);
@@ -751,22 +759,14 @@ export async function downloadResultPdf(input: ResultPdfInput) {
         }
       }
 
-      /* ── Options ── */
-      const letters = ["A", "B", "C", "D"];
-      let optionsList: Array<{ key: string; text: string; image_url?: string }> = [];
-      if (Array.isArray(q.options)) {
-        optionsList = letters.map((k, i) => {
-          const match = (q.options as any[]).find((o: any) => o?.key?.toUpperCase() === k || o?.key === k);
-          if (match) return { key: k, text: match.text || (match.image_url ? "[Image Option]" : `Option ${k}`), image_url: match.image_url };
-          const raw = (q.options as any[])[i];
-          if (typeof raw === "string") return { key: k, text: raw };
-          if (raw && typeof raw === "object") return { key: k, text: raw.text || (raw.image_url ? "[Image Option]" : `Option ${k}`), image_url: raw.image_url };
-          return { key: k, text: `Option ${k}` };
-        });
-      }
+      /* ── Options List with Explicit Answer Highlighting ── */
+      const optionsList = normalizeQuestionOptions(q.options).map((opt) => ({
+        ...opt,
+        text: opt.text ?? getOptionText(q.options, opt.key),
+      }));
 
       if (optionsList.length > 0) {
-        ensure(10);
+        ensure(12);
         doc.setFont("helvetica", "bold");
         doc.setFontSize(7.5);
         doc.setTextColor(...GREY);
@@ -775,8 +775,8 @@ export async function downloadResultPdf(input: ResultPdfInput) {
 
         for (const opt of optionsList) {
           const optKey = normalizeOptionKey(opt.key) ?? "";
-          const isOptCorrect = correctOpt === optKey;
-          const isOptChosen  = selected === optKey;
+          const isOptCorrect = isOptionSelected(correctOpt, optKey);
+          const isOptChosen  = isOptionSelected(selected, optKey);
           const isWrongChoice = isOptChosen && !isOptCorrect;
 
           let bg: RGB | null  = null;
@@ -784,9 +784,22 @@ export async function downloadResultPdf(input: ResultPdfInput) {
           let tc: RGB         = DARK;
           let suffix          = "";
 
-          if (isOptCorrect && isOptChosen) { bg = GREEN_BG; bd = GREEN; tc = GREEN; suffix = "  ✓  Your Answer  (Correct)"; }
-          else if (isOptCorrect)           { bg = GREEN_BG; bd = GREEN; tc = GREEN; suffix = "  ✓  Correct Option"; }
-          else if (isWrongChoice)          { bg = RED_BG;   bd = RED;   tc = RED;   suffix = "  ✗  Your Answer  (Incorrect)"; }
+          if (isOptCorrect && isOptChosen) {
+            bg = GREEN_BG;
+            bd = GREEN;
+            tc = GREEN;
+            suffix = "  ✓  Your Selection  (Correct)";
+          } else if (isOptCorrect) {
+            bg = GREEN_BG;
+            bd = GREEN;
+            tc = GREEN;
+            suffix = "  ✓  Correct Option";
+          } else if (isWrongChoice) {
+            bg = RED_BG;
+            bd = RED;
+            tc = RED;
+            suffix = "  ✗  Your Selected Answer  (Incorrect)";
+          }
 
           const label  = `  (${opt.key})  ${opt.text}${suffix}`;
           const lines  = doc.splitTextToSize(label, W - M * 2 - 20);
@@ -810,6 +823,7 @@ export async function downloadResultPdf(input: ResultPdfInput) {
           }
           y += rowH + 3;
 
+          // Option Image if any
           if (opt.image_url) {
             const optImg = imageMap.get(opt.image_url);
             if (optImg) {
@@ -828,14 +842,14 @@ export async function downloadResultPdf(input: ResultPdfInput) {
         }
       }
 
-      /* ── Your Answer / Correct Answer summary line ── */
+      /* ── Response Verdict Summary Strip ── */
       ensure(26);
       y += 4;
       const summaryParts: string[] = [];
-      if (!isSkipped) summaryParts.push(`Your Answer: Option (${selected})`);
-      summaryParts.push(`Correct Answer: Option (${correctOpt})`);
-      if (isCorrect) summaryParts.push("Verdict: CORRECT (+4)");
-      else if (isWrong) summaryParts.push("Verdict: INCORRECT (-1)");
+      if (!isSkipped) summaryParts.push(`Your Choice: Option (${selected ?? "-"})`);
+      summaryParts.push(`Correct Answer: Option (${correctOpt || "-"})`);
+      if (isCorrect) summaryParts.push(`Verdict: CORRECT (+${marksCorrect})`);
+      else if (isWrong) summaryParts.push(`Verdict: INCORRECT (${marksWrong})`);
       else summaryParts.push("Verdict: NOT ATTEMPTED (0)");
 
       const summaryBg: RGB   = isCorrect ? GREEN_BG  : isWrong ? RED_BG    : LIGHT_BG;
@@ -851,7 +865,7 @@ export async function downloadResultPdf(input: ResultPdfInput) {
       doc.text(summaryParts.join("   |   "), M + 10, y + 8);
       y += 24;
 
-      /* ── Solution ── */
+      /* ── Step-by-Step Solution & Diagram ── */
       if (q.solution_text || q.solution_image_url || q.solution_video_url) {
         ensure(28);
         doc.setFillColor(...INDIGO_BG);
@@ -893,7 +907,7 @@ export async function downloadResultPdf(input: ResultPdfInput) {
           doc.setFont("helvetica", "bold");
           doc.setFontSize(8);
           doc.setTextColor(...PRIMARY);
-          doc.textWithLink("▶  Watch Video Solution", M + 10, y, { url: q.solution_video_url });
+          doc.textWithLink("▶  Watch Video Solution Online", M + 10, y, { url: q.solution_video_url });
           y += 16;
         }
       }
@@ -919,11 +933,15 @@ export async function downloadResultPdf(input: ResultPdfInput) {
     doc.setFontSize(7.5);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...GREY);
-    doc.text("Testum  ·  India's Most Affordable NEET Test Series  ·  testum.in", M, H - 18);
+    doc.text("Testum  ·  India's Most Affordable NEET CBT Test Series  ·  testum.in", M, H - 18);
     doc.text(`Page ${p} of ${totalPages}`, W - M, H - 18, { align: "right" });
   }
 
-  /* ── 10. SAVE ───────────────────────────────────────── */
+  if (onProgress) onProgress("Saving file...", 98);
+
+  /* ── 10. SAVE & DOWNLOAD ────────────────────────────── */
   const safe = input.testTitle.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
   doc.save(`testum-report-${safe}.pdf`);
+
+  if (onProgress) onProgress("Complete!", 100);
 }
