@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
@@ -776,13 +776,11 @@ function Player() {
     );
   }
 
-  // Format time display
-  const hh = String(Math.floor(remaining / 3600)).padStart(2, "0");
-  const mm = String(Math.floor((remaining % 3600) / 60)).padStart(2, "0");
-  const ss = String(remaining % 60).padStart(2, "0");
+  const handleZoomImage = useCallback((url: string) => {
+    setZoomImage(url);
+  }, []);
 
   const currentAnswer = answers[currentQuestion.id];
-  const isTimeCritical = remaining < 300; // Under 5 mins
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-slate-50 dark:bg-slate-950 select-none">
@@ -796,11 +794,18 @@ function Player() {
                 <h1 className="truncate font-display text-sm sm:text-base font-bold text-foreground max-w-[130px] sm:max-w-xs md:max-w-none">
                   {test?.title || "NEET CBT Exam"}
                 </h1>
-                {/* Sync status indicator */}
-                <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <span className={cn("h-2 w-2 rounded-full", syncStatus === "synced" ? "bg-emerald-500" : "bg-amber-500 animate-ping")} />
-                  {syncStatus === "synced" ? "Auto-saved" : "Saving…"}
-                </span>
+                {/* Sync status indicator with stable fixed width to prevent layout shifts */}
+                <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground w-24 shrink-0">
+                  <span
+                    className={cn(
+                      "h-2 w-2 rounded-full shrink-0 transition-colors",
+                      syncStatus === "synced" ? "bg-emerald-500" : "bg-amber-500"
+                    )}
+                  />
+                  <span className="truncate">
+                    {syncStatus === "synced" ? "Auto-saved" : "Saving…"}
+                  </span>
+                </div>
               </div>
               <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground truncate">
                 <span className="capitalize font-bold text-primary">
@@ -820,7 +825,7 @@ function Player() {
               size="sm"
               variant="outline"
               onClick={() => setFontSize(fontSize === "normal" ? "large" : "normal")}
-              className="h-9 px-2 sm:px-2.5 rounded-xl border text-muted-foreground hover:text-foreground hidden sm:flex items-center gap-1"
+              className="h-9 px-2 sm:px-2.5 rounded-xl border text-muted-foreground hover:text-foreground hidden sm:flex items-center gap-1 cursor-pointer"
               title="Toggle Font Size"
             >
               <Type className="h-3.5 w-3.5" />
@@ -832,7 +837,7 @@ function Player() {
               size="sm"
               variant="outline"
               onClick={() => setPaperModalOpen(true)}
-              className="h-9 px-2 sm:px-2.5 rounded-xl border text-muted-foreground hover:text-foreground hidden sm:flex items-center gap-1.5"
+              className="h-9 px-2 sm:px-2.5 rounded-xl border text-muted-foreground hover:text-foreground hidden sm:flex items-center gap-1.5 cursor-pointer"
               title="View full question paper"
             >
               <FileText className="h-3.5 w-3.5 text-primary" />
@@ -844,28 +849,14 @@ function Player() {
               size="sm"
               variant="outline"
               onClick={toggleFullscreen}
-              className="h-9 w-9 p-0 rounded-xl border text-muted-foreground hover:text-foreground hidden md:flex items-center justify-center"
+              className="h-9 w-9 p-0 rounded-xl border text-muted-foreground hover:text-foreground hidden md:flex items-center justify-center cursor-pointer"
               title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
             >
               {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </Button>
 
-            {/* Live Countdown Timer */}
-            <div
-              className={cn(
-                "flex items-center gap-1.5 rounded-xl px-2.5 sm:px-3 py-1.5 font-mono text-xs sm:text-sm font-bold tabular-nums shadow-xs transition-colors",
-                isTimeCritical
-                  ? "bg-rose-600 text-white animate-pulse"
-                  : remaining < 900
-                  ? "bg-amber-500 text-white"
-                  : "bg-slate-900 text-white dark:bg-slate-800"
-              )}
-            >
-              <Clock className="h-3.5 w-3.5" />
-              <span>
-                {hh}:{mm}:{ss}
-              </span>
-            </div>
+            {/* Live Countdown Timer (Memoized) */}
+            <ExamTimer remaining={remaining} />
 
             {/* Mobile Question Palette Drawer Trigger */}
             <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
@@ -873,7 +864,7 @@ function Player() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="lg:hidden h-9 rounded-xl border-primary/30 text-primary hover:bg-primary/10 gap-1 px-2 font-semibold"
+                  className="lg:hidden h-9 rounded-xl border-primary/30 text-primary hover:bg-primary/10 gap-1 px-2 font-semibold cursor-pointer"
                 >
                   <LayoutGrid className="h-4 w-4" />
                   <span className="text-xs font-bold">
@@ -916,7 +907,7 @@ function Player() {
                 <Button
                   size="sm"
                   variant="destructive"
-                  className="h-9 rounded-xl font-bold shadow-xs px-3 sm:px-4"
+                  className="h-9 rounded-xl font-bold shadow-xs px-3 sm:px-4 cursor-pointer"
                   disabled={submitting}
                 >
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Submit"}
@@ -976,10 +967,10 @@ function Player() {
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="gap-2 sm:gap-0 pt-2">
-                  <AlertDialogCancel className="rounded-xl font-semibold">Back to Exam</AlertDialogCancel>
+                  <AlertDialogCancel className="rounded-xl font-semibold cursor-pointer">Back to Exam</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={() => submitTest(false)}
-                    className="rounded-xl bg-destructive hover:bg-destructive/90 font-bold"
+                    className="rounded-xl bg-destructive hover:bg-destructive/90 font-bold cursor-pointer"
                   >
                     Yes, Submit Exam
                   </AlertDialogAction>
@@ -998,7 +989,7 @@ function Player() {
             <button
               onClick={() => setSelectedSubject("all")}
               className={cn(
-                "rounded-xl px-3 py-1 text-xs font-bold transition-all shrink-0 cursor-pointer",
+                "rounded-xl px-3 py-1 text-xs font-bold transition-colors shrink-0 cursor-pointer",
                 selectedSubject === "all"
                   ? "bg-primary text-primary-foreground shadow-xs"
                   : "bg-secondary text-muted-foreground hover:text-foreground"
@@ -1020,7 +1011,7 @@ function Player() {
                     }
                   }}
                   className={cn(
-                    "rounded-xl px-3 py-1 text-xs font-bold capitalize transition-all shrink-0 flex items-center gap-1.5 cursor-pointer",
+                    "rounded-xl px-3 py-1 text-xs font-bold capitalize transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer",
                     selectedSubject === s
                       ? "bg-primary text-primary-foreground shadow-xs"
                       : isCurrentQSubject
@@ -1041,166 +1032,21 @@ function Player() {
 
       {/* Main Examination Layout */}
       <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col lg:flex-row lg:items-start lg:gap-5 p-3 sm:p-4 md:p-5">
-        {/* Left / Center: Question Paper Workspace */}
-        <main className="flex-1 flex flex-col rounded-3xl border bg-card p-4 sm:p-6 shadow-xs transition-all">
-          {/* Question Info & Marks Bar */}
-          <div className="mb-4 flex items-center justify-between pb-3 border-b border-border/80 gap-2 flex-wrap">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="rounded-xl bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary tracking-wide">
-                Question {currentGlobalIdx + 1} of {questions.length}
-              </span>
-              <span className="rounded-xl bg-secondary px-2.5 py-1 text-xs font-semibold capitalize text-foreground border border-border/50">
-                {currentQuestion.subject}
-              </span>
-              {currentQuestion.chapter && (
-                <span className="text-xs text-muted-foreground hidden sm:inline-block">
-                  · {currentQuestion.chapter}
-                </span>
-              )}
-            </div>
-            <div className="text-xs font-semibold flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-muted/40 border">
-              <span className="text-emerald-600 font-bold">+{test?.marks_correct ?? 4}</span>
-              <span className="text-muted-foreground/40">/</span>
-              <span className="text-rose-600 font-bold">{test?.marks_wrong ?? -1}</span>
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium ml-0.5">Marks</span>
-            </div>
-          </div>
-
-          {/* Question Image with zoom */}
-          {currentQuestion.question_image_url && (
-            <div className="mb-4">
-              <ExamImage
-                src={currentQuestion.question_image_url}
-                alt={`Question ${currentQuestion.order_index}`}
-                onZoom={(url) => setZoomImage(url)}
-                maxHeightClass="max-h-[260px] sm:max-h-[340px] md:max-h-[440px]"
-              />
-            </div>
-          )}
-
-          {/* Question Text */}
-          {currentQuestion.question_text && (
-            <div
-              className={cn(
-                "mb-5 font-medium leading-relaxed text-foreground whitespace-pre-wrap select-text",
-                fontSize === "large" ? "text-base sm:text-lg" : "text-sm sm:text-base"
-              )}
-            >
-              {currentQuestion.question_text}
-            </div>
-          )}
-
-          {/* Options Grid (1 col on mobile, 2 col on sm+) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-            {currentQuestion.options.map((op) => {
-              const isSelected = isOptionSelected(currentAnswer?.selected_option, op.key);
-              return (
-                <button
-                  key={op.key}
-                  type="button"
-                  onClick={() => selectOption(op.key)}
-                  className={cn(
-                    "group flex items-start gap-3 rounded-2xl border p-3.5 sm:p-4 text-left transition-all duration-150 touch-manipulation cursor-pointer text-foreground",
-                    isSelected
-                      ? "border-primary bg-primary/10 shadow-sm ring-2 ring-primary ring-offset-1 dark:ring-offset-card"
-                      : "bg-card hover:border-primary/50 hover:bg-secondary/40 active:scale-[0.99]"
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "grid h-8 w-8 shrink-0 place-items-center rounded-xl font-display text-sm font-bold transition-colors",
-                      isSelected
-                        ? "bg-primary text-primary-foreground shadow-xs ring-2 ring-primary/30"
-                        : "bg-secondary text-foreground group-hover:bg-primary/20 group-hover:text-primary"
-                    )}
-                  >
-                    {op.key}
-                  </span>
-                  <div
-                    className={cn(
-                      "min-w-0 flex-1 pt-0.5 leading-relaxed font-medium",
-                      fontSize === "large" ? "text-sm sm:text-base" : "text-xs sm:text-sm"
-                    )}
-                  >
-                    {op.image_url && (
-                      <ExamImage
-                        src={op.image_url}
-                        alt={`Option ${op.key}`}
-                        maxHeightClass="max-h-28 sm:max-h-36"
-                        showZoomButton={false}
-                        containerClassName="p-1 mb-2 border-0 bg-transparent"
-                      />
-                    )}
-                    {op.text && <span>{op.text}</span>}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Bottom Action Controls */}
-          <div className="mt-6 pt-4 border-t border-border/80 space-y-3">
-            {/* Status preview & Keyboard Shortcuts Hint */}
-            <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-              <div>
-                {currentAnswer?.selected_option ? (
-                  <span>
-                    Selected Choice: <strong className="text-primary font-bold">Option ({currentAnswer.selected_option})</strong>
-                  </span>
-                ) : (
-                  <span className="italic text-muted-foreground/80">No option chosen</span>
-                )}
-              </div>
-              <div className="text-[11px] font-medium hidden md:block text-muted-foreground">
-                Keys: <kbd className="px-1.5 py-0.5 rounded bg-muted border font-mono">1-4</kbd> / <kbd className="px-1.5 py-0.5 rounded bg-muted border font-mono">A-D</kbd> · <kbd className="px-1.5 py-0.5 rounded bg-muted border font-mono">Enter</kbd> Save · <kbd className="px-1.5 py-0.5 rounded bg-muted border font-mono">M</kbd> Review
-              </div>
-            </div>
-
-            {/* Responsive Action Buttons */}
-            <div className="grid grid-cols-2 gap-2.5 sm:flex sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2 col-span-2 sm:col-span-1 w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  size="default"
-                  onClick={clearResponse}
-                  disabled={!currentAnswer?.selected_option}
-                  className="flex-1 sm:flex-initial h-11 rounded-2xl border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 font-semibold text-xs sm:text-sm"
-                >
-                  <CircleX className="mr-1.5 h-4 w-4" /> Clear
-                </Button>
-
-                <Button
-                  variant="secondary"
-                  size="default"
-                  onClick={markForReviewAndNext}
-                  className="flex-1 sm:flex-initial h-11 rounded-2xl font-semibold bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-950 dark:text-purple-300 text-xs sm:text-sm"
-                >
-                  <Flag className="mr-1.5 h-4 w-4" /> Mark for Review
-                </Button>
-              </div>
-
-              <div className="flex items-center gap-2 col-span-2 sm:col-span-1 w-full sm:w-auto justify-end">
-                <Button
-                  variant="outline"
-                  size="default"
-                  onClick={goPrevious}
-                  disabled={currentGlobalIdx === 0}
-                  className="flex-1 sm:flex-initial h-11 rounded-2xl font-semibold text-xs sm:text-sm"
-                >
-                  <ChevronLeft className="mr-1 h-4 w-4" /> Prev
-                </Button>
-
-                <Button
-                  size="default"
-                  onClick={saveAndNext}
-                  className="flex-1 sm:flex-initial h-11 rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold shadow-sm text-xs sm:text-sm px-6"
-                >
-                  <Save className="mr-1.5 h-4 w-4" /> Save & Next
-                </Button>
-              </div>
-            </div>
-          </div>
-        </main>
+        {/* Left / Center: Question Paper Workspace (Memoized) */}
+        <QuestionWorkspace
+          currentQuestion={currentQuestion}
+          currentAnswer={currentAnswer}
+          currentGlobalIdx={currentGlobalIdx}
+          totalQuestions={questions.length}
+          test={test}
+          fontSize={fontSize}
+          onSelectOption={selectOption}
+          onClearResponse={clearResponse}
+          onMarkForReviewAndNext={markForReviewAndNext}
+          onGoPrevious={goPrevious}
+          onSaveAndNext={saveAndNext}
+          onZoomImage={handleZoomImage}
+        />
 
         {/* Right Desktop Question Palette Sidebar */}
         <aside className="hidden lg:flex w-80 shrink-0 flex-col rounded-3xl border bg-card shadow-xs overflow-hidden sticky top-20 max-h-[calc(100vh-100px)]">
@@ -1255,7 +1101,7 @@ function Player() {
                       goToQuestion(idx);
                       setPaperModalOpen(false);
                     }}
-                    className="h-7 text-xs rounded-lg font-semibold"
+                    className="h-7 text-xs rounded-lg font-semibold cursor-pointer"
                   >
                     Go to Question
                   </Button>
@@ -1312,7 +1158,7 @@ function Player() {
                   variant="default"
                   size="sm"
                   onClick={() => setZoomImage(null)}
-                  className="h-8 rounded-xl text-xs font-semibold"
+                  className="h-8 rounded-xl text-xs font-semibold cursor-pointer"
                 >
                   Close
                 </Button>
@@ -1326,9 +1172,230 @@ function Player() {
 }
 
 // -------------------------------------------------------------
-// Component: Question Palette (Accurate NTA Grid, Filters & Colors)
+// Component: Live Countdown Timer (Isolated to avoid full page re-renders)
 // -------------------------------------------------------------
-function QuestionPalette({
+const ExamTimer = memo(function ExamTimer({ remaining }: { remaining: number }) {
+  const hh = String(Math.floor(remaining / 3600)).padStart(2, "0");
+  const mm = String(Math.floor((remaining % 3600) / 60)).padStart(2, "0");
+  const ss = String(remaining % 60).padStart(2, "0");
+  const isTimeCritical = remaining < 300; // Under 5 mins
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-1.5 rounded-xl px-2.5 sm:px-3 py-1.5 font-mono text-xs sm:text-sm font-bold tabular-nums shadow-xs transition-colors",
+        isTimeCritical
+          ? "bg-rose-600 text-white animate-pulse"
+          : remaining < 900
+          ? "bg-amber-500 text-white"
+          : "bg-slate-900 text-white dark:bg-slate-800"
+      )}
+    >
+      <Clock className="h-3.5 w-3.5" />
+      <span>
+        {hh}:{mm}:{ss}
+      </span>
+    </div>
+  );
+});
+
+// -------------------------------------------------------------
+// Component: Question Paper Workspace (Memoized for zero flicker)
+// -------------------------------------------------------------
+const QuestionWorkspace = memo(function QuestionWorkspace({
+  currentQuestion,
+  currentAnswer,
+  currentGlobalIdx,
+  totalQuestions,
+  test,
+  fontSize,
+  onSelectOption,
+  onClearResponse,
+  onMarkForReviewAndNext,
+  onGoPrevious,
+  onSaveAndNext,
+  onZoomImage,
+}: {
+  currentQuestion: Q;
+  currentAnswer: A | undefined;
+  currentGlobalIdx: number;
+  totalQuestions: number;
+  test: any;
+  fontSize: FontSizeOption;
+  onSelectOption: (key: string) => void;
+  onClearResponse: () => void;
+  onMarkForReviewAndNext: () => void;
+  onGoPrevious: () => void;
+  onSaveAndNext: () => void;
+  onZoomImage: (url: string) => void;
+}) {
+  return (
+    <main className="flex-1 flex flex-col rounded-3xl border bg-card p-4 sm:p-6 shadow-xs">
+      {/* Question Info & Marks Bar */}
+      <div className="mb-4 flex items-center justify-between pb-3 border-b border-border/80 gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="rounded-xl bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary tracking-wide">
+            Question {currentGlobalIdx + 1} of {totalQuestions}
+          </span>
+          <span className="rounded-xl bg-secondary px-2.5 py-1 text-xs font-semibold capitalize text-foreground border border-border/50">
+            {currentQuestion.subject}
+          </span>
+          {currentQuestion.chapter && (
+            <span className="text-xs text-muted-foreground hidden sm:inline-block">
+              · {currentQuestion.chapter}
+            </span>
+          )}
+        </div>
+        <div className="text-xs font-semibold flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-muted/40 border">
+          <span className="text-emerald-600 font-bold">+{test?.marks_correct ?? 4}</span>
+          <span className="text-muted-foreground/40">/</span>
+          <span className="text-rose-600 font-bold">{test?.marks_wrong ?? -1}</span>
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium ml-0.5">Marks</span>
+        </div>
+      </div>
+
+      {/* Question Image with zoom */}
+      {currentQuestion.question_image_url && (
+        <div className="mb-4">
+          <ExamImage
+            src={currentQuestion.question_image_url}
+            alt={`Question ${currentQuestion.order_index}`}
+            onZoom={onZoomImage}
+            maxHeightClass="max-h-[260px] sm:max-h-[340px] md:max-h-[440px]"
+          />
+        </div>
+      )}
+
+      {/* Question Text */}
+      {currentQuestion.question_text && (
+        <div
+          className={cn(
+            "mb-5 font-medium leading-relaxed text-foreground whitespace-pre-wrap select-text",
+            fontSize === "large" ? "text-base sm:text-lg" : "text-sm sm:text-base"
+          )}
+        >
+          {currentQuestion.question_text}
+        </div>
+      )}
+
+      {/* Options Grid (1 col on mobile, 2 col on sm+) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+        {currentQuestion.options.map((op) => {
+          const isSelected = isOptionSelected(currentAnswer?.selected_option, op.key);
+          return (
+            <button
+              key={op.key}
+              type="button"
+              onClick={() => onSelectOption(op.key)}
+              className={cn(
+                "group flex items-start gap-3 rounded-2xl border p-3.5 sm:p-4 text-left transition-colors duration-100 touch-manipulation cursor-pointer text-foreground",
+                isSelected
+                  ? "border-primary bg-primary/10 shadow-xs ring-2 ring-primary/80 ring-offset-1 dark:ring-offset-card"
+                  : "border-border bg-card hover:border-primary/50 hover:bg-secondary/40"
+              )}
+            >
+              <span
+                className={cn(
+                  "grid h-8 w-8 shrink-0 place-items-center rounded-xl font-display text-sm font-bold transition-colors",
+                  isSelected
+                    ? "bg-primary text-primary-foreground shadow-xs ring-2 ring-primary/30"
+                    : "bg-secondary text-foreground group-hover:bg-primary/20 group-hover:text-primary"
+                )}
+              >
+                {op.key}
+              </span>
+              <div
+                className={cn(
+                  "min-w-0 flex-1 pt-0.5 leading-relaxed font-medium",
+                  fontSize === "large" ? "text-sm sm:text-base" : "text-xs sm:text-sm"
+                )}
+              >
+                {op.image_url && (
+                  <ExamImage
+                    src={op.image_url}
+                    alt={`Option ${op.key}`}
+                    maxHeightClass="max-h-28 sm:max-h-36"
+                    showZoomButton={false}
+                    containerClassName="p-1 mb-2 border-0 bg-transparent"
+                  />
+                )}
+                {op.text && <span>{op.text}</span>}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Bottom Action Controls */}
+      <div className="mt-6 pt-4 border-t border-border/80 space-y-3">
+        {/* Status preview & Keyboard Shortcuts Hint */}
+        <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+          <div>
+            {currentAnswer?.selected_option ? (
+              <span>
+                Selected Choice: <strong className="text-primary font-bold">Option ({currentAnswer.selected_option})</strong>
+              </span>
+            ) : (
+              <span className="italic text-muted-foreground/80">No option chosen</span>
+            )}
+          </div>
+          <div className="text-[11px] font-medium hidden md:block text-muted-foreground">
+            Keys: <kbd className="px-1.5 py-0.5 rounded bg-muted border font-mono">1-4</kbd> / <kbd className="px-1.5 py-0.5 rounded bg-muted border font-mono">A-D</kbd> · <kbd className="px-1.5 py-0.5 rounded bg-muted border font-mono">Enter</kbd> Save · <kbd className="px-1.5 py-0.5 rounded bg-muted border font-mono">M</kbd> Review
+          </div>
+        </div>
+
+        {/* Responsive Action Buttons */}
+        <div className="grid grid-cols-2 gap-2.5 sm:flex sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 col-span-2 sm:col-span-1 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              size="default"
+              onClick={onClearResponse}
+              disabled={!currentAnswer?.selected_option}
+              className="flex-1 sm:flex-initial h-11 rounded-2xl border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 font-semibold text-xs sm:text-sm cursor-pointer"
+            >
+              <CircleX className="mr-1.5 h-4 w-4" /> Clear
+            </Button>
+
+            <Button
+              variant="secondary"
+              size="default"
+              onClick={onMarkForReviewAndNext}
+              className="flex-1 sm:flex-initial h-11 rounded-2xl font-semibold bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-950 dark:text-purple-300 text-xs sm:text-sm cursor-pointer"
+            >
+              <Flag className="mr-1.5 h-4 w-4" /> Mark for Review
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-2 col-span-2 sm:col-span-1 w-full sm:w-auto justify-end">
+            <Button
+              variant="outline"
+              size="default"
+              onClick={onGoPrevious}
+              disabled={currentGlobalIdx === 0}
+              className="flex-1 sm:flex-initial h-11 rounded-2xl font-semibold text-xs sm:text-sm cursor-pointer"
+            >
+              <ChevronLeft className="mr-1 h-4 w-4" /> Prev
+            </Button>
+
+            <Button
+              size="default"
+              onClick={onSaveAndNext}
+              className="flex-1 sm:flex-initial h-11 rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold shadow-sm text-xs sm:text-sm px-6 cursor-pointer"
+            >
+              <Save className="mr-1.5 h-4 w-4" /> Save & Next
+            </Button>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+});
+
+// -------------------------------------------------------------
+// Component: Question Palette (Accurate NTA Grid, Filters & Colors - Memoized)
+// -------------------------------------------------------------
+const QuestionPalette = memo(function QuestionPalette({
   questions,
   answers,
   currentGlobalIdx,
@@ -1425,7 +1492,7 @@ function QuestionPalette({
             type="button"
             onClick={() => setPaletteFilter(paletteFilter === item.filter ? "all" : item.filter)}
             className={cn(
-              "flex items-center gap-2 p-1 rounded-lg text-left transition-all cursor-pointer",
+              "flex items-center gap-2 p-1 rounded-lg text-left transition-colors duration-100 cursor-pointer",
               paletteFilter === item.filter ? "bg-primary/10 ring-1 ring-primary/40" : "hover:bg-muted/40"
             )}
           >
@@ -1477,7 +1544,7 @@ function QuestionPalette({
                 type="button"
                 onClick={() => onSelectQuestion(globalIdx)}
                 className={cn(
-                  "aspect-square rounded-xl text-xs font-bold transition-all duration-150 flex items-center justify-center cursor-pointer touch-manipulation",
+                  "aspect-square rounded-xl text-xs font-bold transition-colors duration-100 flex items-center justify-center cursor-pointer touch-manipulation",
                   statusColor,
                   isCurrent &&
                     "ring-3 ring-primary ring-offset-2 scale-105 z-10 dark:ring-offset-card"
@@ -1492,4 +1559,4 @@ function QuestionPalette({
       </div>
     </div>
   );
-}
+});

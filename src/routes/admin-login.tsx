@@ -94,11 +94,33 @@ function AdminLoginPage() {
         <form onSubmit={submit} className="mt-6 space-y-3">
           <div>
             <Label htmlFor="admin-id">Admin ID</Label>
-            <Input id="admin-id" autoComplete="username" required value={id} onChange={(e) => setId(e.target.value)} placeholder="Enter admin ID" />
+            <Input
+              id="admin-id"
+              name="username"
+              autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              required
+              value={id}
+              onChange={(e) => setId(e.target.value)}
+              placeholder="Enter admin ID"
+            />
           </div>
           <div>
             <Label htmlFor="admin-password">Password</Label>
-            <Input id="admin-password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+            <Input
+              id="admin-password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
           </div>
           <Button type="submit" size="lg" className="w-full" disabled={busy}>
             {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Sign in to dashboard

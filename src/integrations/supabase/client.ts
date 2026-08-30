@@ -28,6 +28,46 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
   };
 }
 
+const createSafeStorage = () => {
+  const memoryFallback: Record<string, string> = {};
+
+  return {
+    getItem: (key: string): string | null => {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const val = window.localStorage.getItem(key);
+          if (val !== null) return val;
+        }
+      } catch {
+        // Storage access restricted (e.g. Safari private browsing, restricted WebViews)
+      }
+      return memoryFallback[key] ?? null;
+    },
+    setItem: (key: string, value: string): void => {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem(key, value);
+        }
+      } catch {
+        // Storage access restricted
+      }
+      memoryFallback[key] = value;
+    },
+    removeItem: (key: string): void => {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.removeItem(key);
+        }
+      } catch {
+        // Storage access restricted
+      }
+      delete memoryFallback[key];
+    },
+  };
+};
+
+const safeStorage = createSafeStorage();
+
 function createSupabaseClient(): any {
   const envUrl =
     (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_URL) ||
@@ -45,9 +85,10 @@ function createSupabaseClient(): any {
       fetch: createSupabaseFetch(SUPABASE_PUBLISHABLE_KEY),
     },
     auth: {
-      storage: typeof window !== 'undefined' ? localStorage : undefined,
+      storage: safeStorage,
       persistSession: true,
       autoRefreshToken: true,
+      detectSessionInUrl: true,
     }
   });
 }

@@ -426,6 +426,7 @@ export type Database = {
           id: string
           kind: Database["public"]["Enums"]["series_kind"]
           plan_code: Database["public"]["Enums"]["plan_code"] | null
+          planner_pdf_url: string | null
           subject: Database["public"]["Enums"]["subject"]
           title: string
           updated_at: string
@@ -437,6 +438,7 @@ export type Database = {
           id?: string
           kind: Database["public"]["Enums"]["series_kind"]
           plan_code?: Database["public"]["Enums"]["plan_code"] | null
+          planner_pdf_url?: string | null
           subject?: Database["public"]["Enums"]["subject"]
           title: string
           updated_at?: string
@@ -448,6 +450,7 @@ export type Database = {
           id?: string
           kind?: Database["public"]["Enums"]["series_kind"]
           plan_code?: Database["public"]["Enums"]["plan_code"] | null
+          planner_pdf_url?: string | null
           subject?: Database["public"]["Enums"]["subject"]
           title?: string
           updated_at?: string

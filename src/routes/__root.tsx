@@ -66,19 +66,25 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=5" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" },
       { title: "Testum  -  NEET 2027 CBT Test Series & AI Analysis" },
       { name: "description", content: "Practice NEET 2027 with 340+ chapter-wise, part & full syllabus CBT tests. Real NTA-style exam environment with AI-powered weak point analysis." },
       { name: "author", content: "Testum" },
       { name: "theme-color", content: "#4b3fc9" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+      { name: "apple-mobile-web-app-title", content: "Testum" },
       { property: "og:title", content: "Testum  -  NEET 2027 CBT Test Series" },
       { property: "og:description", content: "Real NTA-style CBT tests with AI weak-point analysis for NEET 2027 aspirants." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
+      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
     ],
   }),
   shellComponent: RootShell,
@@ -99,6 +105,16 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+
+  useEffect(() => {
+    // Register Service Worker for PWA
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch((err) => {
+        console.warn("SW registration:", err);
+      });
+    }
+  }, []);
+
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event: string) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
@@ -111,6 +127,7 @@ function RootComponent() {
       }
     };
   }, [queryClient, router]);
+
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />

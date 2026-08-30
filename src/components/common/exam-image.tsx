@@ -1,7 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { ZoomIn, RefreshCw, ExternalLink, ImageOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+// Global cache of successfully loaded image URLs to prevent skeleton flashes on re-renders
+const loadedImageUrls = new Set<string>();
 
 interface ExamImageProps {
   src: string;
@@ -43,7 +46,7 @@ export function normalizeImageUrl(url: string): string {
   return cleanUrl;
 }
 
-export function ExamImage({
+export const ExamImage = memo(function ExamImage({
   src,
   alt,
   className,
@@ -53,18 +56,26 @@ export function ExamImage({
   showZoomButton = true,
 }: ExamImageProps) {
   const normalizedSrc = normalizeImageUrl(src);
-  const [loading, setLoading] = useState(true);
+  const isAlreadyLoaded = Boolean(normalizedSrc && loadedImageUrls.has(normalizedSrc));
+  const [loading, setLoading] = useState(!isAlreadyLoaded);
   const [error, setError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
-  // Reset states when src changes
+  // Reset states only when src changes to a non-cached URL or retry is triggered
   useEffect(() => {
-    setLoading(true);
-    setError(false);
+    if (!normalizedSrc) return;
+    if (loadedImageUrls.has(normalizedSrc) && retryCount === 0) {
+      setLoading(false);
+      setError(false);
+    } else {
+      setLoading(true);
+      setError(false);
+    }
   }, [normalizedSrc, retryCount]);
 
   const handleRetry = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (normalizedSrc) loadedImageUrls.delete(normalizedSrc);
     setError(false);
     setLoading(true);
     setRetryCount((prev) => prev + 1);
@@ -73,7 +84,7 @@ export function ExamImage({
   const getSourceWithCacheBuster = () => {
     if (retryCount === 0) return normalizedSrc;
     const separator = normalizedSrc.includes("?") ? "&" : "?";
-    return `${normalizedSrc}${separator}_t=${Date.now()}`;
+    return `${normalizedSrc}${separator}_retry=${retryCount}`;
   };
 
   if (!normalizedSrc) return null;
@@ -81,11 +92,11 @@ export function ExamImage({
   return (
     <div
       className={cn(
-        "relative group rounded-2xl border bg-muted/15 p-2 overflow-hidden flex flex-col items-center justify-center transition-all",
+        "relative group rounded-2xl border bg-muted/15 p-2 overflow-hidden flex flex-col items-center justify-center",
         containerClassName
       )}
     >
-      {/* Loading Skeleton */}
+      {/* Loading Skeleton - only shown if not already cached */}
       {loading && !error && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-card/80 backdrop-blur-xs gap-2 min-h-[140px]">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -138,15 +149,19 @@ export function ExamImage({
           alt={alt}
           referrerPolicy="no-referrer"
           crossOrigin="anonymous"
-          onLoad={() => setLoading(false)}
+          onLoad={() => {
+            if (normalizedSrc) loadedImageUrls.add(normalizedSrc);
+            setLoading(false);
+          }}
           onError={() => {
+            if (normalizedSrc) loadedImageUrls.delete(normalizedSrc);
             setLoading(false);
             setError(true);
           }}
           className={cn(
-            "w-auto max-w-full object-contain rounded-xl transition-all duration-200 select-none",
+            "w-auto max-w-full object-contain rounded-xl transition-opacity duration-150 select-none",
             maxHeightClass,
-            loading ? "opacity-0 invisible" : "opacity-100 visible",
+            loading ? "opacity-0" : "opacity-100",
             onZoom ? "cursor-zoom-in hover:brightness-95" : "",
             className
           )}
@@ -162,7 +177,7 @@ export function ExamImage({
             e.stopPropagation();
             onZoom(normalizedSrc);
           }}
-          className="absolute top-3 right-3 grid h-8 w-8 place-items-center rounded-lg bg-black/75 text-white shadow-md hover:bg-black transition-all hover:scale-105 active:scale-95"
+          className="absolute top-3 right-3 grid h-8 w-8 place-items-center rounded-lg bg-black/75 text-white shadow-md hover:bg-black transition-colors hover:scale-105 active:scale-95"
           title="Zoom image"
         >
           <ZoomIn className="h-4 w-4" />
@@ -170,4 +185,5 @@ export function ExamImage({
       )}
     </div>
   );
-}
+});
+

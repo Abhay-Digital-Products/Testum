@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import { Countdown } from "@/components/countdown";
 import { AuthDialog } from "@/components/auth-dialog";
+import { PWAInstallButton } from "@/components/pwa-install-button";
 import { SUPPORT } from "@/lib/support";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -189,7 +190,16 @@ function Home() {
               <a key={l.href} href={l.href} className="text-sm font-medium text-slate-600 transition hover:text-primary">{l.label}</a>
             ))}
           </nav>
-          <div className="hidden items-center gap-2 lg:flex">
+          <div className="hidden items-center gap-2.5 lg:flex">
+            <PWAInstallButton
+              variant="outline"
+              size="sm"
+              showBadge
+              className="rounded-lg border-emerald-600/30 bg-emerald-50/50 text-emerald-700 hover:bg-emerald-100/60 font-semibold"
+            >
+              App
+            </PWAInstallButton>
+
             {user ? (
               <Button asChild size="sm" className="rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 shadow-sm">
                 <Link to="/app"><LayoutDashboard className="mr-1.5 h-4 w-4" /> Go to Dashboard</Link>
@@ -217,6 +227,14 @@ function Home() {
 
           {/* Mobile Menu Drawer */}
           <div className="flex items-center gap-2 lg:hidden">
+            <PWAInstallButton
+              variant="outline"
+              size="sm"
+              className="rounded-lg border-emerald-600/30 bg-emerald-50/70 text-emerald-700 text-xs font-semibold h-8 px-2.5"
+            >
+              App
+            </PWAInstallButton>
+
             {user && (
               <Button asChild size="sm" className="rounded-lg bg-primary text-xs font-semibold text-primary-foreground">
                 <Link to="/app">Dashboard</Link>
@@ -285,7 +303,16 @@ function Home() {
                 </div>
 
                 {/* Bottom Actions & Support in Drawer */}
-                <div className="p-5 bg-slate-50/70 border-t border-slate-100 space-y-4">
+                <div className="p-5 bg-slate-50/70 border-t border-slate-100 space-y-3">
+                  <PWAInstallButton
+                    variant="outline"
+                    size="lg"
+                    showBadge
+                    className="w-full h-11 rounded-xl border-emerald-600/40 bg-emerald-50 text-emerald-800 font-bold justify-center shadow-sm"
+                  >
+                    Install Testum Mobile App
+                  </PWAInstallButton>
+
                   {user ? (
                     <Button asChild size="lg" className="w-full h-11 rounded-xl bg-primary font-semibold text-primary-foreground shadow-md shadow-primary/20">
                       <Link to="/app" onClick={() => setMobileOpen(false)}>
@@ -318,7 +345,6 @@ function Home() {
                     </div>
                   )}
 
-                  {/* Help channels */}
                   <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-500">
                     <a href={SUPPORT.telegram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-primary">
                       <Send className="h-3.5 w-3.5 text-primary" /> Telegram
@@ -335,8 +361,8 @@ function Home() {
         </div>
       </header>
 
-      {/* HERO */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-slate-50 to-white">
+      {/* HERO SECTION */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-blue-50/50 via-white to-slate-50/30">
         <div className="mx-auto grid max-w-6xl gap-10 px-5 pb-14 pt-10 lg:grid-cols-[1fr_1.15fr] lg:items-center lg:pb-20 lg:pt-16">
           <div>
             <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
@@ -350,7 +376,7 @@ function Home() {
               Full-syllabus, part-syllabus, chapter-wise and daily practice  -  built to help you improve your score
               and secure your MBBS seat.
             </p>
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
               {user ? (
                 <Button asChild size="lg" className="h-12 rounded-xl bg-primary px-6 font-semibold text-primary-foreground shadow-elegant hover:bg-primary/90">
                   <Link to="/app">Go to Dashboard <ArrowRight className="ml-1.5 h-4 w-4" /></Link>
@@ -364,6 +390,7 @@ function Home() {
                   Start your first CBT test <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Button>
               )}
+              <PWAInstallButton variant="hero" />
               <Button asChild size="lg" variant="outline" className="h-12 rounded-xl border-slate-200 px-6 font-semibold">
                 <a href="#pricing">View plans</a>
               </Button>

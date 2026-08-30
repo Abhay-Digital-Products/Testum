@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { OfferPopup } from "@/components/offer-popup";
+import { PWAInstallButton } from "@/components/pwa-install-button";
 
 export const Route = createFileRoute("/_authenticated/app")({
   component: AppLayout,
@@ -66,6 +67,13 @@ function AppLayout() {
             {isAdmin && <Link to="/admin" className={`rounded-lg px-3 py-1.5 text-sm font-medium ${path.startsWith("/admin") ? "bg-primary text-primary-foreground" : "text-primary hover:bg-primary/10"}`}>Admin</Link>}
           </nav>
           <div className="ml-auto flex items-center gap-2">
+            <PWAInstallButton
+              variant="outline"
+              size="sm"
+              className="hidden sm:inline-flex h-8 text-xs font-semibold rounded-lg border-emerald-600/30 bg-emerald-50/60 text-emerald-700 hover:bg-emerald-100"
+            >
+              App
+            </PWAInstallButton>
             <Button variant="ghost" size="icon" className="relative"><Bell className="h-4 w-4" /></Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

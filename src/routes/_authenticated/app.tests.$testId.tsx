@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEntitlements, type PlanCode } from "@/hooks/use-entitlements";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Info, Loader2, Lock } from "lucide-react";
+import { ArrowLeft, Info, Loader2, Lock, FileText, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/app/tests/$testId")({
@@ -39,7 +39,7 @@ function Instructions() {
   const { hasAccess, loading: entLoading } = useEntitlements();
 
   useEffect(() => {
-    supabase.from("tests").select("id, title, duration_minutes, total_questions, marks_correct, marks_wrong, test_series(title, kind, plan_code)").eq("id", testId).maybeSingle().then(({ data }: any) => setTest(data));
+    supabase.from("tests").select("id, title, duration_minutes, total_questions, marks_correct, marks_wrong, test_series(title, kind, plan_code, planner_pdf_url)").eq("id", testId).maybeSingle().then(({ data }: any) => setTest(data));
     (async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return;
@@ -88,7 +88,23 @@ function Instructions() {
       <Button asChild variant="ghost" size="sm"><Link to="/app/tests"><ArrowLeft className="mr-1 h-4 w-4"/>Back</Link></Button>
 
       <div className="rounded-3xl border bg-hero p-6 text-primary-foreground shadow-elegant">
-        <div className="text-xs opacity-90 uppercase tracking-wider">{test.test_series?.title}</div>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="text-xs opacity-90 uppercase tracking-wider">{test.test_series?.title}</div>
+          {test.test_series?.planner_pdf_url && (
+            <Button
+              asChild
+              size="sm"
+              variant="secondary"
+              className="h-7 px-2.5 rounded-lg text-xs font-bold bg-white/20 hover:bg-white/30 text-white border-0 cursor-pointer shadow-xs gap-1"
+              title="Open Test Series Planner PDF"
+            >
+              <a href={test.test_series.planner_pdf_url} target="_blank" rel="noopener noreferrer">
+                <FileText className="h-3.5 w-3.5" /> Series Planner (PDF)
+                <ExternalLink className="h-3 w-3 opacity-70 ml-0.5" />
+              </a>
+            </Button>
+          )}
+        </div>
         <h1 className="mt-1 font-display text-2xl font-bold sm:text-3xl">{test.title}</h1>
         <div className="mt-4 grid grid-cols-3 gap-3 text-center">
           <div className="rounded-xl bg-primary-foreground/10 p-3">

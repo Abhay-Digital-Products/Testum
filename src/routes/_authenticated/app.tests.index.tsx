@@ -5,10 +5,11 @@ import { useEntitlements, type PlanCode } from "@/hooks/use-entitlements";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { TestListSkeleton } from "@/components/skeleton-loaders";
 import {
   Search, Clock, ListChecks, Play, Atom, TestTube2, Sprout, Trophy,
-  CheckCircle2, Lock, Crown, Layers, BookOpen, Calendar, Gift, Puzzle
+  CheckCircle2, Lock, Crown, Layers, BookOpen, Calendar, Gift, Puzzle, FileText, ExternalLink, Download, Sparkles
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/tests/")({
@@ -70,7 +71,9 @@ const TAB_CONFIG = {
 function Tests() {
   const search = Route.useSearch();
   const [tests, setTests] = useState<any[]>([]);
+  const [allSeries, setAllSeries] = useState<any[]>([]);
   const [attemptedIds, setAttemptedIds] = useState<Set<string>>(new Set());
+  const [plannerModalSeries, setPlannerModalSeries] = useState<any | null>(null);
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<"free" | "chapter" | "part" | "full">((search.tab as any) || "free");
   const [dataLoading, setDataLoading] = useState(true);
@@ -79,11 +82,18 @@ function Tests() {
   useEffect(() => {
     (async () => {
       setDataLoading(true);
-      const { data } = await supabase
-        .from("tests")
-        .select("id, title, duration_minutes, total_questions, marks_correct, marks_wrong, opens_at, syllabus, is_free, subject_scope, series_id, test_series(kind, subject, title, plan_code)")
-        .order("created_at", { ascending: false });
-      setTests(data ?? []);
+      const [{ data: testData }, { data: seriesData }] = await Promise.all([
+        supabase
+          .from("tests")
+          .select("id, title, duration_minutes, total_questions, marks_correct, marks_wrong, opens_at, syllabus, is_free, subject_scope, series_id, test_series(id, kind, subject, title, plan_code, planner_pdf_url)")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("test_series")
+          .select("id, title, kind, subject, description, plan_code, planner_pdf_url")
+          .order("title", { ascending: true }),
+      ]);
+      setTests(testData ?? []);
+      setAllSeries(seriesData ?? []);
 
       const { data: u } = await supabase.auth.getUser();
       if (u.user) {
@@ -138,6 +148,19 @@ function Tests() {
       return true;
     });
   }, [tests, tab, q]);
+
+  // Test series belonging to the active tab
+  const tabSeries = useMemo(() => {
+    if (tab === "free") {
+      const freeOnly = allSeries.filter((s) => s.plan_code === "free" || !s.plan_code);
+      return freeOnly.length > 0 ? freeOnly : allSeries;
+    }
+    return allSeries.filter((s) => s.kind === tab);
+  }, [allSeries, tab]);
+
+  const availablePlanners = useMemo(() => {
+    return tabSeries.filter((s) => Boolean(s.planner_pdf_url && typeof s.planner_pdf_url === "string" && s.planner_pdf_url.trim()));
+  }, [tabSeries]);
 
   const activeConf = TAB_CONFIG[tab] || TAB_CONFIG.free;
   const ActiveIcon = activeConf.icon;
@@ -228,23 +251,47 @@ function Tests() {
           </div>
         </div>
 
-        {/* Dynamic Category Hero Banner */}
+        {/* Dynamic Category Hero Banner with Planner Action */}
         <div className={"mt-3 rounded-2xl border bg-gradient-to-r p-3.5 sm:p-4.5 transition-all duration-300 min-w-0 overflow-hidden " + activeConf.gradient}>
-          <div className="flex items-center gap-3">
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-card border shadow-xs">
-              <ActiveIcon className="h-4 w-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="font-display text-sm sm:text-base font-bold text-foreground truncate">{activeConf.title}</h2>
-                <span className={"rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border shrink-0 " + activeConf.badgeColor}>
-                  {filtered.length} tests
-                </span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-card border shadow-xs">
+                <ActiveIcon className="h-4 w-4" />
               </div>
-              <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed hidden sm:block">
-                {activeConf.description}
-              </p>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="font-display text-sm sm:text-base font-bold text-foreground truncate">{activeConf.title}</h2>
+                  <span className={"rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border shrink-0 " + activeConf.badgeColor}>
+                    {filtered.length} tests
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed hidden sm:block">
+                  {activeConf.description}
+                </p>
+              </div>
             </div>
+
+            {/* Planner Button in Category Banner */}
+            {availablePlanners.length > 0 && (
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                {availablePlanners.map((p) => (
+                  <Button
+                    key={p.id}
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="rounded-xl bg-card/90 hover:bg-card border-primary/40 text-primary font-bold text-xs gap-1.5 shadow-xs cursor-pointer h-8 sm:h-9"
+                    title={`Open ${p.title} Planner PDF`}
+                  >
+                    <a href={p.planner_pdf_url} target="_blank" rel="noopener noreferrer">
+                      <FileText className="h-3.5 w-3.5 text-primary" />
+                      <span>{availablePlanners.length === 1 ? "📅 View Planner (PDF)" : `📅 Planner: ${p.title.slice(0, 16)}…`}</span>
+                      <ExternalLink className="h-3 w-3 opacity-60 ml-0.5" />
+                    </a>
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -253,8 +300,97 @@ function Tests() {
           <TabsContent
             key={k}
             value={k}
-            className="mt-4 space-y-3 focus-visible:outline-none animate-in fade-in-50 slide-in-from-bottom-2 duration-300 min-w-0"
+            className="mt-4 space-y-4 focus-visible:outline-none animate-in fade-in-50 slide-in-from-bottom-2 duration-300 min-w-0"
           >
+            {/* Test Series & Planners Section */}
+            {tabSeries.length > 0 && (
+              <div className="rounded-2xl border bg-card/60 p-3.5 sm:p-4 space-y-3 shadow-2xs">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="grid h-7 w-7 place-items-center rounded-lg bg-primary/10 text-primary">
+                      <FileText className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs sm:text-sm font-bold text-foreground">
+                        {k === "free" ? "Test Series Schedules & Planners" : `${activeConf.title} · Planners`}
+                      </h3>
+                      <p className="text-[11px] text-muted-foreground hidden sm:block">
+                        Download syllabus blueprints & chapter schedules for each test series.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full bg-secondary text-foreground shrink-0 border">
+                    {tabSeries.length} Series
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {tabSeries.map((s) => {
+                    const isFreeSeries = s.plan_code === "free" || !s.plan_code;
+                    const SubjIcon = subjectIcon(s.subject);
+                    const hasPdf = Boolean(s.planner_pdf_url && typeof s.planner_pdf_url === "string" && s.planner_pdf_url.trim());
+
+                    return (
+                      <div
+                        key={s.id}
+                        className="group relative rounded-xl border border-border/80 bg-background/80 p-3 shadow-2xs hover:border-primary/50 transition-all flex flex-col justify-between gap-2.5"
+                      >
+                        <div className="flex items-start gap-2.5 min-w-0">
+                          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                            <SubjIcon className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-display font-bold text-xs sm:text-sm text-foreground truncate group-hover:text-primary transition-colors">
+                              {s.title}
+                            </h4>
+                            <div className="mt-0.5 flex items-center gap-1 text-[10px] sm:text-[11px] text-muted-foreground capitalize">
+                              <span className="font-semibold text-primary">{s.subject}</span>
+                              <span>·</span>
+                              <span className="truncate">{isFreeSeries ? "Free Series" : `${s.kind} Syllabus`}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Planner Action */}
+                        <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-2">
+                          <span className={"inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase " + (
+                            hasPdf ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border border-purple-200 dark:border-purple-800" : "bg-muted text-muted-foreground border border-border/60"
+                          )}>
+                            {hasPdf ? "PDF Ready" : "Schedule"}
+                          </span>
+
+                          {hasPdf ? (
+                            <Button
+                              asChild
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2.5 rounded-lg text-xs font-bold bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 dark:hover:bg-purple-900 border-purple-300 dark:border-purple-800 shadow-2xs gap-1 cursor-pointer"
+                              title={`Download ${s.title} Planner PDF`}
+                            >
+                              <a href={s.planner_pdf_url} target="_blank" rel="noopener noreferrer">
+                                <FileText className="h-3 w-3" /> Planner PDF ↗
+                              </a>
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setPlannerModalSeries(s)}
+                              className="h-7 px-2 rounded-lg text-xs font-semibold text-muted-foreground hover:text-foreground gap-1 cursor-pointer"
+                            >
+                              <FileText className="h-3 w-3" /> View Planner
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Tests Listing */}
             {dataLoading ? (
               <TestListSkeleton count={4} />
             ) : filtered.length === 0 ? (
@@ -268,15 +404,15 @@ function Tests() {
                 </div>
                 <h3 className="mt-4 font-display font-bold text-base text-foreground">No tests found</h3>
                 <p className="mt-1 text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
-                  {q ? (`No tests matched "${q}". Try clearing your search term.`) : (`No ${activeConf.title.toLowerCase()} added yet. Switch to Free Tests or check back soon.`)}
+                  {q ? (`No tests matched "${q}". Try clearing your search term.`) : (`No ${activeConf.title.toLowerCase()} added yet. Switch to another tab or check back soon.`)}
                 </p>
                 {q ? (
-                  <Button variant="outline" size="sm" onClick={() => setQ("")} className="mt-4 rounded-xl text-xs">
+                  <Button variant="outline" size="sm" onClick={() => setQ("")} className="mt-4 rounded-xl text-xs cursor-pointer">
                     Clear Search
                   </Button>
                 ) : (
-                  <Button asChild variant="outline" size="sm" className="mt-4 rounded-xl text-xs">
-                    <Link to="/app/tests" search={{ tab: "free" }}>View Free Tests</Link>
+                  <Button asChild variant="outline" size="sm" className="mt-4 rounded-xl text-xs cursor-pointer">
+                    <Link to="/app/tests" search={{ tab: "part" }}>View Part Syllabus Tests</Link>
                   </Button>
                 )}
               </div>
@@ -328,6 +464,36 @@ function Tests() {
                                 <span className="font-medium text-foreground/70 truncate max-w-[140px] sm:max-w-none">{t.test_series?.title ?? "NEET Test Series"}</span>
                                 <span>·</span>
                                 <span className="capitalize font-semibold text-primary shrink-0">{t.test_series?.subject ?? "Mixed"}</span>
+                                {t.test_series?.planner_pdf_url ? (
+                                  <>
+                                    <span>·</span>
+                                    <a
+                                      href={t.test_series.planner_pdf_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 dark:text-purple-300 hover:text-purple-900 dark:hover:text-purple-100 bg-purple-100 dark:bg-purple-950/80 px-2 py-0.5 rounded-md border border-purple-300 dark:border-purple-800 transition-colors shadow-2xs cursor-pointer"
+                                      title="Open Series Planner / Schedule PDF"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <FileText className="h-3 w-3" /> Planner PDF ↗
+                                    </a>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>·</span>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (t.test_series) setPlannerModalSeries(t.test_series);
+                                      }}
+                                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground hover:text-foreground bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded-md border border-border/60 transition-colors cursor-pointer"
+                                      title="View Planner Information"
+                                    >
+                                      <FileText className="h-3 w-3" /> Planner
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             </div>
 
@@ -412,6 +578,75 @@ function Tests() {
           </TabsContent>
         ))}
       </Tabs>
+
+      {/* Planner Info / Download Dialog */}
+      <Dialog open={!!plannerModalSeries} onOpenChange={(open) => { if (!open) setPlannerModalSeries(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              {plannerModalSeries?.title ?? "Test Series Planner"}
+            </DialogTitle>
+            <DialogDescription>
+              Official schedule & chapter-wise syllabus blueprint for this test series.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-2 space-y-3">
+            <div className="rounded-2xl border bg-muted/40 p-4 space-y-2">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Category</span>
+                <span className="font-semibold capitalize text-foreground">{plannerModalSeries?.kind} Syllabus</span>
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Subject</span>
+                <span className="font-semibold capitalize text-foreground">{plannerModalSeries?.subject}</span>
+              </div>
+              {plannerModalSeries?.description && (
+                <div className="pt-2 border-t text-xs text-muted-foreground">
+                  {plannerModalSeries.description}
+                </div>
+              )}
+            </div>
+
+            {plannerModalSeries?.planner_pdf_url ? (
+              <div className="space-y-2.5">
+                <p className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4" /> Study planner PDF is available for download and online view.
+                </p>
+                <div className="flex gap-2">
+                  <Button asChild className="flex-1 font-bold rounded-xl gap-1.5 cursor-pointer">
+                    <a href={plannerModalSeries.planner_pdf_url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4" /> Open PDF in New Tab
+                    </a>
+                  </Button>
+                  <Button asChild variant="outline" className="font-bold rounded-xl gap-1.5 cursor-pointer">
+                    <a href={plannerModalSeries.planner_pdf_url} download target="_blank" rel="noopener noreferrer">
+                      <Download className="h-4 w-4" /> Download
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50/70 dark:bg-amber-950/40 dark:border-amber-900/60 p-4 text-center space-y-2">
+                <div className="mx-auto grid h-10 w-10 place-items-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300">
+                  <Clock className="h-5 w-5" />
+                </div>
+                <h4 className="font-bold text-sm text-foreground">Schedule Uploading Soon</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  The study planner and test schedule PDF for <b>{plannerModalSeries?.title}</b> is currently being prepared and will be uploaded shortly by the instructor.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setPlannerModalSeries(null)} className="cursor-pointer">
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

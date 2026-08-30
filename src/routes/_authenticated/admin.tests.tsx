@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { toast } from "sonner";
 import {
   Plus, Pencil, Trash2, ListChecks, Search, Copy, Upload, Lock, Loader2,
-  ImageIcon, Sparkles, Calendar, BookOpen, Clock, ShieldCheck
+  ImageIcon, Sparkles, Calendar, BookOpen, Clock, ShieldCheck, FileText, X, ExternalLink
 } from "lucide-react";
 import { QuickUpload } from "@/components/admin/quick-upload";
 
@@ -100,12 +100,12 @@ function AdminTests() {
             {series.map((s) => {
               const isFreeSeries = s.plan_code === "free" || !s.plan_code;
               return (
-                <div key={s.id} className="rounded-2xl border bg-card p-4 flex items-center justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-display font-semibold text-base">{s.title}</span>
+                <div key={s.id} className="rounded-2xl border bg-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs hover:shadow-xs transition-all">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-display font-bold text-base">{s.title}</span>
                       <span className={"rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider " + (
-                        isFreeSeries ? "bg-emerald-100 text-emerald-800 border border-emerald-300" : "bg-primary/10 text-primary border border-primary/20"
+                        isFreeSeries ? "bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300" : "bg-primary/10 text-primary border border-primary/20"
                       )}>
                         {isFreeSeries ? "100% Free Series" : (s.kind + " plan")}
                       </span>
@@ -115,8 +115,41 @@ function AdminTests() {
                       {s.description && (" · " + s.description)}
                     </div>
                   </div>
-                  <div className="flex shrink-0 gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => setEditSeries(s)}><Pencil className="h-4 w-4" /></Button>
+                  <div className="flex items-center shrink-0 gap-2 flex-wrap">
+                    {s.planner_pdf_url ? (
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          asChild
+                          size="sm"
+                          variant="outline"
+                          className="h-8 rounded-xl text-xs gap-1 font-bold bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border-purple-300 dark:border-purple-800 hover:bg-purple-100 cursor-pointer"
+                        >
+                          <a href={s.planner_pdf_url} target="_blank" rel="noopener noreferrer">
+                            <FileText className="h-3.5 w-3.5" /> View Planner PDF ↗
+                          </a>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setEditSeries(s)}
+                          className="h-8 rounded-xl text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+                          title="Change Planner PDF"
+                        >
+                          Replace
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setEditSeries(s)}
+                        className="h-8 rounded-xl text-xs gap-1.5 font-semibold text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-800 bg-purple-50/70 dark:bg-purple-950/40 hover:bg-purple-100 cursor-pointer"
+                        title="Upload Planner PDF for this series"
+                      >
+                        <Upload className="h-3.5 w-3.5" /> Attach Planner PDF
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="icon" onClick={() => setEditSeries(s)} title="Edit Series Details"><Pencil className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={async () => {
                       if (confirm("Delete this series and all its tests?")) {
                         const { error } = await supabase.from("test_series").delete().eq("id", s.id);
@@ -268,7 +301,7 @@ function AdminTests() {
   );
 }
 
-/* ---------------- Series Form ---------------- */
+/* ---------------- Series Form (with Planner PDF Upload) ---------------- */
 
 function SeriesForm({ existing, onSaved, onClose }: { existing?: any; onSaved: () => void; onClose?: () => void }) {
   const [open, setOpen] = useState(!!existing);
@@ -277,9 +310,49 @@ function SeriesForm({ existing, onSaved, onClose }: { existing?: any; onSaved: (
   const [planCode, setPlanCode] = useState(existing ? (existing.plan_code ?? "free") : "chapter");
   const [title, setTitle] = useState(existing?.title ?? "");
   const [description, setDescription] = useState(existing?.description ?? "");
+  const [plannerPdfUrl, setPlannerPdfUrl] = useState(existing?.planner_pdf_url ?? "");
+  const [uploadingPdf, setUploadingPdf] = useState(false);
   const [busy, setBusy] = useState(false);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
 
   const close = (o: boolean) => { setOpen(o); if (!o) onClose?.(); };
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      return toast.error("Please select a valid PDF file");
+    }
+
+    if (file.size > 25 * 1024 * 1024) {
+      return toast.error("PDF size should be under 25MB");
+    }
+
+    setUploadingPdf(true);
+    try {
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const fileName = `planner_${Date.now()}_${sanitizedName}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("planners")
+        .upload(fileName, file, { cacheControl: "3600", upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicData } = supabase.storage
+        .from("planners")
+        .getPublicUrl(uploadData.path);
+
+      setPlannerPdfUrl(publicData.publicUrl);
+      toast.success("Planner PDF uploaded successfully!");
+    } catch (err: any) {
+      toast.error("Upload failed: " + (err.message || err));
+    } finally {
+      setUploadingPdf(false);
+      if (pdfInputRef.current) pdfInputRef.current.value = "";
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -290,6 +363,7 @@ function SeriesForm({ existing, onSaved, onClose }: { existing?: any; onSaved: (
       title: title.trim(),
       description: description.trim() || null,
       plan_code: planCode === "free" ? null : planCode,
+      planner_pdf_url: plannerPdfUrl.trim() || null,
     };
     let error;
     if (existing) {
@@ -301,7 +375,7 @@ function SeriesForm({ existing, onSaved, onClose }: { existing?: any; onSaved: (
     setBusy(false);
     if (error) return toast.error(error.message);
     toast.success(existing ? "Series updated" : "Series created");
-    if (!existing) { setTitle(""); setDescription(""); }
+    if (!existing) { setTitle(""); setDescription(""); setPlannerPdfUrl(""); }
     close(false);
     onSaved();
   };
@@ -309,8 +383,8 @@ function SeriesForm({ existing, onSaved, onClose }: { existing?: any; onSaved: (
   return (
     <Dialog open={open} onOpenChange={close}>
       {!existing && <DialogTrigger asChild><Button><Plus className="mr-1 h-4 w-4" />New Test Series</Button></DialogTrigger>}
-      <DialogContent>
-        <DialogHeader><DialogTitle>{existing ? "Edit test series" : "Create Test Series"}</DialogTitle></DialogHeader>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>{existing ? "Edit Test Series" : "Create Test Series"}</DialogTitle></DialogHeader>
         <form onSubmit={submit} className="space-y-4 pt-1">
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -362,8 +436,91 @@ function SeriesForm({ existing, onSaved, onClose }: { existing?: any; onSaved: (
             <Textarea className="mt-1" value={description ?? ""} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Syllabus overview or batch notes..." />
           </div>
 
-          <DialogFooter>
-            <Button type="submit" disabled={busy}>
+          {/* Planner PDF Upload Section */}
+          <div className="rounded-2xl border bg-muted/20 p-3.5 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <FileText className="h-4 w-4 text-primary" /> Series Study Planner PDF
+              </Label>
+              {plannerPdfUrl && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300">
+                  PDF Attached
+                </span>
+              )}
+            </div>
+
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Upload the complete study plan / test schedule PDF for this series so students can view and download it directly.
+            </p>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                ref={pdfInputRef}
+                type="file"
+                accept="application/pdf"
+                onChange={handlePdfUpload}
+                className="hidden"
+                id="series-planner-pdf"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => pdfInputRef.current?.click()}
+                disabled={uploadingPdf}
+                className="h-9 rounded-xl text-xs gap-1.5 font-semibold cursor-pointer shrink-0"
+              >
+                {uploadingPdf ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading PDF…
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-3.5 w-3.5 text-primary" /> Upload Planner PDF
+                  </>
+                )}
+              </Button>
+
+              {plannerPdfUrl && (
+                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    asChild
+                    className="h-9 rounded-xl text-xs gap-1 font-semibold truncate cursor-pointer"
+                  >
+                    <a href={plannerPdfUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-3.5 w-3.5" /> View PDF
+                    </a>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setPlannerPdfUrl("")}
+                    className="h-9 w-9 rounded-xl text-destructive hover:bg-destructive/10 cursor-pointer"
+                    title="Remove PDF"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Direct URL input fallback */}
+            <div>
+              <Input
+                value={plannerPdfUrl}
+                onChange={(e) => setPlannerPdfUrl(e.target.value)}
+                placeholder="Or paste direct PDF link (e.g. Google Drive, CDN)..."
+                className="h-8 text-xs rounded-lg"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="pt-2">
+            <Button type="submit" disabled={busy || uploadingPdf} className="cursor-pointer">
               {busy && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
               {existing ? "Save changes" : "Create Series"}
             </Button>

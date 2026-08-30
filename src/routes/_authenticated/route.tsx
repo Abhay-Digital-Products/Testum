@@ -8,28 +8,26 @@ export const Route = createFileRoute("/_authenticated")({
       // 1. Check existing cached session
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
 
-      if (!sessionError && sessionData.session?.user) {
-        // If session is expired or expiring soon (within 2 minutes), proactively refresh it
+      if (!sessionError && sessionData?.session?.user) {
+        // If session is expiring within 1 minute, refresh it in the background
         const isExpiring = sessionData.session.expires_at
-          ? sessionData.session.expires_at * 1000 < Date.now() + 120000
+          ? sessionData.session.expires_at * 1000 < Date.now() + 60000
           : false;
 
         if (isExpiring) {
-          const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
-          if (!refreshErr && refreshed.session?.user) {
-            return { user: refreshed.session.user };
+          try {
+            const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
+            if (!refreshErr && refreshed?.session?.user) {
+              return { user: refreshed.session.user };
+            }
+          } catch {
+            // Keep using active session if network refresh fails
           }
         }
         return { user: sessionData.session.user };
       }
 
-      // 2. Try explicit session refresh (e.g. from refresh_token in storage)
-      const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
-      if (!refreshErr && refreshed.session?.user) {
-        return { user: refreshed.session.user };
-      }
-
-      // 3. Fallback check with getUser
+      // 2. Fallback check with getUser if session isn't in memory
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (!userError && userData?.user) {
         return { user: userData.user };
@@ -39,9 +37,10 @@ export const Route = createFileRoute("/_authenticated")({
     }
 
     // Only redirect if genuinely unauthenticated
+    const returnPath = location.pathname + location.search;
     throw redirect({
       to: "/auth",
-      search: { redirect: location.href },
+      search: { redirect: returnPath.startsWith("/auth") ? undefined : returnPath },
     });
   },
   component: () => <Outlet />,
