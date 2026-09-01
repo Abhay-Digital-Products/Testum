@@ -7,6 +7,7 @@ import { LayoutDashboard, ClipboardList, ArrowLeft, Users, IndianRupee, Tag, Meg
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin")({
+  ssr: false,
   component: AdminLayout,
 });
 

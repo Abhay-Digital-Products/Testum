@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/offers")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Admin - Offer Popup Manager" }] }),
   component: AdminOffers,
 });

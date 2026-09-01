@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/tests/")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Test Series - Testum" },

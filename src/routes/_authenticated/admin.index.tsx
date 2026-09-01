@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Users, ClipboardList, HelpCircle, Trophy, IndianRupee, Layers, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Admin Overview  -  Testum" }] }),
   component: AdminHome,
 });

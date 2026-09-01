@@ -11,6 +11,7 @@ export type AuthSearch = {
 };
 
 export const Route = createFileRoute("/auth")({
+  ssr: false,
   validateSearch: (search: Record<string, unknown>): AuthSearch => ({
     redirect: typeof search.redirect === "string" ? search.redirect : undefined,
     tab: search.tab === "signup" || search.tab === "signin" ? search.tab : undefined,

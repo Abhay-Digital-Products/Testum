@@ -8,6 +8,7 @@ import { BookOpen, Layers, Trophy, Crown, Check, Loader2, ShieldCheck, Zap, Star
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/app/pricing")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Unlock Test Series - Testum" },

@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Search, ShieldCheck, KeyRound, Trash2, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/students")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Admin · Students  -  Testum" }] }),
   component: AdminStudents,
 });

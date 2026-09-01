@@ -40,9 +40,45 @@ import {
 } from "@/lib/exam-options";
 import { cn } from "@/lib/utils";
 
+function ResultErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+  console.error("[Result Error]", error);
+  const handleRecover = () => {
+    try {
+      reset();
+    } catch {}
+    if (typeof window !== "undefined") {
+      window.location.reload();
+    }
+  };
+
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center p-4">
+      <div className="max-w-md text-center p-6 rounded-3xl border bg-card shadow-sm space-y-4">
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-destructive/10 text-destructive">
+          <TrendingUp className="h-6 w-6" />
+        </div>
+        <h2 className="text-lg font-bold font-display text-foreground">Could not load diagnostic results</h2>
+        <p className="text-xs text-muted-foreground">
+          There was a temporary problem loading your exam score analysis. Tap below to retry.
+        </p>
+        <div className="flex justify-center gap-2 pt-2">
+          <Button onClick={handleRecover} className="rounded-xl font-bold cursor-pointer">
+            Retry Loading Results
+          </Button>
+          <Button asChild variant="outline" className="rounded-xl">
+            <Link to="/app">Back to Dashboard</Link>
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/_authenticated/app/result/$attemptId")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Diagnostic Result & Test Analysis - Testum" }] }),
   component: Result,
+  errorComponent: ResultErrorComponent,
 });
 
 type FilterStatus = "all" | "wrong" | "correct" | "unattempted";
@@ -58,6 +94,9 @@ function Result() {
   const [pdfProgress, setPdfProgress] = useState<{ step: string; percent: number } | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [review, setReview] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Navigation & Filter state
   const [activeTab, setActiveTab] = useState<ActiveTab>("review");
@@ -68,14 +107,29 @@ function Result() {
   const [zoomImage, setZoomImage] = useState<string | null>(null);
 
   const load = async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
-      const { data: att } = await supabase
+      const { data: att, error: attErr } = await supabase
         .from("attempts")
         .select(
           "id, score, correct_count, wrong_count, unattempted_count, time_spent_seconds, submitted_at, tests(id, title, total_questions, marks_correct, marks_wrong, duration_minutes)"
         )
         .eq("id", attemptId)
         .maybeSingle();
+
+      if (attErr) {
+        setLoadError(attErr.message || "Failed to fetch attempt record.");
+        setLoading(false);
+        return;
+      }
+
+      if (!att) {
+        setLoadError("Attempt not found. It may have been removed.");
+        setLoading(false);
+        return;
+      }
+
       setAttempt(att);
 
       const {
@@ -157,6 +211,7 @@ function Result() {
         .filter((r: any) => r.questions)
         .sort((a: any, b: any) => (a.questions?.order_index ?? 0) - (b.questions?.order_index ?? 0));
       setReview(sortedRows);
+      setLoading(false);
 
       // Auto-trigger AI analysis if not yet available
       if (!an && att) {
@@ -172,23 +227,49 @@ function Result() {
           setAiBusy(false);
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error loading result:", err);
+      setLoadError(err?.message || "An unexpected error occurred while loading results.");
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     load();
     /* eslint-disable-next-line */
-  }, [attemptId]);
+  }, [attemptId, retryCount]);
 
-  if (!attempt) {
+  if (loading) {
     return (
       <div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-9 w-9 animate-spin text-primary" />
           <p className="font-display font-bold text-foreground text-base">Loading result diagnostics...</p>
           <p className="text-xs text-muted-foreground">Analyzing scores, solutions, and AI insights...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError || !attempt) {
+    return (
+      <div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">
+        <div className="max-w-md p-6 rounded-3xl border bg-card text-center space-y-4 shadow-sm">
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-destructive/10 text-destructive">
+            <TrendingUp className="h-6 w-6" />
+          </div>
+          <div>
+            <h2 className="font-display font-bold text-base text-foreground">Could not load results</h2>
+            <p className="mt-1 text-xs text-muted-foreground">{loadError || "Result not found."}</p>
+          </div>
+          <div className="flex justify-center gap-2 pt-1">
+            <Button onClick={() => setRetryCount((c) => c + 1)} className="rounded-xl font-bold cursor-pointer">
+              Retry Loading Results
+            </Button>
+            <Button asChild variant="outline" className="rounded-xl">
+              <Link to="/app">Back to Dashboard</Link>
+            </Button>
+          </div>
         </div>
       </div>
     );

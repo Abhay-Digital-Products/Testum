@@ -16,6 +16,7 @@ import {
 import { QuickUpload } from "@/components/admin/quick-upload";
 
 export const Route = createFileRoute("/_authenticated/admin/tests")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Admin - Tests & Questions - Testum" }] }),
   component: AdminTests,
 });

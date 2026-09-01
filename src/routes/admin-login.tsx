@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Loader2, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/admin-login")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Admin Login  -  Testum" },

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/payment-status")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Payment status  -  Testum" }] }),
   component: PaymentStatus,
 });

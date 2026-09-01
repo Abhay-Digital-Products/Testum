@@ -47,9 +47,51 @@ import {
   isAnswerCorrect,
 } from "@/lib/exam-options";
 
+function AttemptErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+  console.error("[CBT Engine Error]", error);
+  const handleRecover = () => {
+    try {
+      reset();
+    } catch {}
+    if (typeof window !== "undefined") {
+      window.location.reload();
+    }
+  };
+
+  return (
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4 select-none">
+      <div className="max-w-md text-center p-6 rounded-3xl border bg-card shadow-sm">
+        <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-amber-500/10 text-amber-600">
+          <AlertCircle className="h-6 w-6" />
+        </div>
+        <h1 className="text-xl font-bold font-display text-foreground">Exam Session Recovery</h1>
+        <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+          Your answers and test timer are securely preserved in local storage. Tap below to resume your exam.
+        </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          <button
+            onClick={handleRecover}
+            className="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer"
+          >
+            Resume & Reload Exam
+          </button>
+          <a
+            href="/app/tests"
+            className="rounded-xl border bg-card px-5 py-2.5 text-sm font-semibold hover:bg-secondary transition-colors"
+          >
+            Back to Tests
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/_authenticated/app/attempt/$attemptId")({
+  ssr: false,
   head: () => ({ meta: [{ title: "CBT Exam Engine  -  Testum" }] }),
   component: Player,
+  errorComponent: AttemptErrorComponent,
 });
 
 type Option = { key: string; text?: string; image_url?: string };
@@ -106,6 +148,8 @@ function Player() {
   const [paletteFilter, setPaletteFilter] = useState<PaletteFilter>("all");
   const [remaining, setRemaining] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryTrigger, setRetryTrigger] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [paperModalOpen, setPaperModalOpen] = useState(false);
@@ -121,29 +165,40 @@ function Player() {
   // Fullscreen detection
   useEffect(() => {
     const handleFsChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement));
+      try {
+        if (typeof document !== "undefined") {
+          setIsFullscreen(Boolean(document.fullscreenElement));
+        }
+      } catch {}
     };
-    document.addEventListener("fullscreenchange", handleFsChange);
-    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+    if (typeof document !== "undefined") {
+      document.addEventListener("fullscreenchange", handleFsChange);
+      return () => document.removeEventListener("fullscreenchange", handleFsChange);
+    }
   }, []);
 
   const toggleFullscreen = async () => {
     try {
+      if (typeof document === "undefined") return;
       if (!document.fullscreenElement) {
-        await document.documentElement.requestFullscreen();
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        }
       } else {
         if (document.exitFullscreen) {
           await document.exitFullscreen();
         }
       }
     } catch (err) {
-      console.warn("Fullscreen toggle error:", err);
+      console.warn("Fullscreen toggle note:", err);
     }
   };
 
   // 1. Initial Load & Restore
   useEffect(() => {
     let isMounted = true;
+    setLoading(true);
+    setLoadError(null);
 
     async function loadAttempt() {
       try {
@@ -161,7 +216,15 @@ function Player() {
           .eq("id", attemptId)
           .maybeSingle();
 
-        if (attErr || !att) {
+        if (attErr) {
+          if (!isMounted) return;
+          setLoadError(attErr.message || "Failed to load test attempt. Please check connection.");
+          setLoading(false);
+          return;
+        }
+
+        if (!att) {
+          if (!isMounted) return;
           toast.error("Attempt not found");
           navigate({ to: "/app/tests" });
           return;
@@ -176,7 +239,7 @@ function Player() {
         setTest(att.tests);
 
         // Fetch questions AND saved answers in parallel
-        const [{ data: qs }, { data: ans }] = await Promise.all([
+        const [{ data: qs, error: qsErr }, { data: ans }] = await Promise.all([
           supabase
             .from("questions")
             .select("id, order_index, subject, chapter, question_image_url, question_text, option_type, options, correct_option")
@@ -187,6 +250,13 @@ function Player() {
             .select("question_id, selected_option, status, time_spent_seconds")
             .eq("attempt_id", attemptId),
         ]);
+
+        if (qsErr) {
+          if (!isMounted) return;
+          setLoadError(qsErr.message || "Failed to load test questions.");
+          setLoading(false);
+          return;
+        }
 
         const qList: Q[] = ((qs as any) ?? []).map((q: any) => ({
           ...q,
@@ -230,7 +300,7 @@ function Player() {
 
           // Compute remaining time
           const durationSec = (att.tests?.duration_minutes ?? 180) * 60;
-          const startedAtTime = new Date(att.started_at).getTime();
+          const startedAtTime = att.started_at && !isNaN(new Date(att.started_at).getTime()) ? new Date(att.started_at).getTime() : Date.now();
           const elapsedSec = Math.floor((Date.now() - startedAtTime) / 1000);
           const rem = Math.max(0, durationSec - elapsedSec);
           setRemaining(rem);
@@ -283,8 +353,12 @@ function Player() {
           setLoading(false);
           questionStart.current = Date.now();
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to load attempt:", err);
+        if (isMounted) {
+          setLoadError(err?.message || "An unexpected error occurred while loading your exam.");
+          setLoading(false);
+        }
       }
     }
 
@@ -293,7 +367,7 @@ function Player() {
     return () => {
       isMounted = false;
     };
-  }, [attemptId, navigate]);
+  }, [attemptId, navigate, retryTrigger]);
 
   // Persist current question index
   useEffect(() => {
@@ -752,7 +826,7 @@ function Player() {
 
   if (loading) {
     return (
-      <div className="grid min-h-[100dvh] place-items-center bg-background text-sm text-muted-foreground">
+      <div className="grid min-h-[100dvh] place-items-center bg-background text-sm text-muted-foreground select-none">
         <div className="flex flex-col items-center gap-3">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent shadow-sm" />
           <p className="font-display font-bold text-foreground text-base">Loading NTA CBT Engine…</p>
@@ -762,13 +836,51 @@ function Player() {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="grid min-h-[100dvh] place-items-center bg-background p-4 text-center select-none">
+        <div className="max-w-md p-6 rounded-3xl border bg-card shadow-sm space-y-4">
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-destructive/10 text-destructive">
+            <AlertCircle className="h-6 w-6" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold font-display text-foreground">Connection Error</h2>
+            <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{loadError}</p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-2 pt-2">
+            <Button
+              onClick={() => {
+                setLoading(true);
+                setLoadError(null);
+                setRetryTrigger((r) => r + 1);
+              }}
+              className="rounded-xl font-bold cursor-pointer"
+            >
+              Retry Loading Exam
+            </Button>
+            <Button asChild variant="outline" className="rounded-xl">
+              <a href="/app/tests">Back to Tests</a>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!currentQuestion) {
     return (
-      <div className="grid min-h-[100dvh] place-items-center bg-background p-4 text-center">
-        <div>
-          <AlertCircle className="mx-auto h-12 w-12 text-destructive mb-3" />
-          <h2 className="text-lg font-bold">No questions found in this test</h2>
-          <Button asChild className="mt-4 rounded-xl">
+      <div className="grid min-h-[100dvh] place-items-center bg-background p-4 text-center select-none">
+        <div className="max-w-md p-6 rounded-3xl border bg-card shadow-sm space-y-4">
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-muted text-muted-foreground">
+            <AlertCircle className="h-6 w-6" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold font-display text-foreground">No questions found</h2>
+            <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+              No questions were found for this test attempt.
+            </p>
+          </div>
+          <Button asChild className="rounded-xl font-bold">
             <a href="/app/tests">Back to Tests</a>
           </Button>
         </div>

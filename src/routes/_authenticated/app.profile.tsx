@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Crown, Check, BookOpen, Layers, Trophy, ShieldCheck, ArrowRight, User, Mail, Phone, GraduationCap, Zap, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/profile")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Profile & Plans  -  Testum" },

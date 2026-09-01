@@ -7,9 +7,45 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Info, Loader2, Lock, FileText, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
+function InstructionsErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+  console.error("[Instructions Error]", error);
+  const handleRecover = () => {
+    try {
+      reset();
+    } catch {}
+    if (typeof window !== "undefined") {
+      window.location.reload();
+    }
+  };
+
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center p-4">
+      <div className="max-w-md text-center p-6 rounded-3xl border bg-card shadow-sm space-y-4">
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-destructive/10 text-destructive">
+          <Info className="h-6 w-6" />
+        </div>
+        <h2 className="text-lg font-bold font-display text-foreground">Could not load test details</h2>
+        <p className="text-xs text-muted-foreground">
+          There was a temporary connection problem loading this test. Tap below to retry.
+        </p>
+        <div className="flex justify-center gap-2 pt-2">
+          <Button onClick={handleRecover} className="rounded-xl font-bold cursor-pointer">
+            Retry Loading Test
+          </Button>
+          <Button asChild variant="outline" className="rounded-xl">
+            <Link to="/app/tests">Back to Tests</Link>
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/_authenticated/app/tests/$testId")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Instructions  -  Testum" }] }),
   component: Instructions,
+  errorComponent: InstructionsErrorComponent,
 });
 
 const NTA_INSTRUCTIONS = [
@@ -36,25 +72,71 @@ function Instructions() {
   const [resumeId, setResumeId] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
   const { hasAccess, loading: entLoading } = useEntitlements();
 
   useEffect(() => {
-    supabase.from("tests").select("id, title, duration_minutes, total_questions, marks_correct, marks_wrong, test_series(title, kind, plan_code, planner_pdf_url)").eq("id", testId).maybeSingle().then(({ data }: any) => setTest(data));
-    (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return;
-      const { data: open } = await supabase
-        .from("attempts")
-        .select("id")
-        .eq("test_id", testId)
-        .eq("user_id", u.user.id)
-        .eq("status", "in_progress")
-        .order("started_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      setResumeId(open?.id ?? null);
-    })();
-  }, [testId]);
+    let isMounted = true;
+    setLoading(true);
+    setLoadError(null);
+
+    async function loadTest() {
+      try {
+        const { data: t, error: tErr } = await supabase
+          .from("tests")
+          .select("id, title, duration_minutes, total_questions, marks_correct, marks_wrong, test_series(title, kind, plan_code, planner_pdf_url)")
+          .eq("id", testId)
+          .maybeSingle();
+
+        if (tErr) {
+          if (isMounted) {
+            setLoadError(tErr.message || "Failed to load test details.");
+            setLoading(false);
+          }
+          return;
+        }
+
+        if (!t) {
+          if (isMounted) {
+            setLoadError("Test not found or no longer available.");
+            setLoading(false);
+          }
+          return;
+        }
+
+        if (isMounted) setTest(t);
+
+        const { data: u } = await supabase.auth.getUser();
+        if (u.user && isMounted) {
+          const { data: open } = await supabase
+            .from("attempts")
+            .select("id")
+            .eq("test_id", testId)
+            .eq("user_id", u.user.id)
+            .eq("status", "in_progress")
+            .order("started_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (isMounted) setResumeId(open?.id ?? null);
+        }
+
+        if (isMounted) setLoading(false);
+      } catch (err: any) {
+        if (isMounted) {
+          setLoadError(err?.message || "Connection error. Please try again.");
+          setLoading(false);
+        }
+      }
+    }
+
+    loadTest();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [testId, retryCount]);
 
   const isStandalone = !test?.series_id || !test?.test_series;
   const rawPlan = isStandalone ? null : (test?.test_series?.plan_code ?? test?.test_series?.kind ?? null);
@@ -70,19 +152,117 @@ function Instructions() {
   const startAttempt = async () => {
     if (!unlocked) { toast.error("Unlock this test series first."); return; }
     setBusy(true);
-    if (resumeId) { navigate({ to: "/app/attempt/$attemptId", params: { attemptId: resumeId } }); return; }
-    const { data: u } = await supabase.auth.getUser();
-    if (!u.user) { setBusy(false); return; }
-    const { data: qs } = await supabase.from("questions").select("id").eq("test_id", testId);
-    if (!qs || qs.length === 0) { toast.error("No questions in this test yet."); setBusy(false); return; }
-    const { data: attempt, error } = await supabase.from("attempts").insert({ test_id: testId, user_id: u.user.id, status: "in_progress" }).select("id").single();
-    if (error || !attempt) { toast.error(error?.message ?? "Failed to start"); setBusy(false); return; }
-    const rows = qs.map((q: any) => ({ attempt_id: attempt.id, question_id: q.id, status: "not_visited" as const }));
-    await supabase.from("answers").insert(rows);
-    navigate({ to: "/app/attempt/$attemptId", params: { attemptId: attempt.id } });
+    try {
+      if (resumeId) {
+        navigate({ to: "/app/attempt/$attemptId", params: { attemptId: resumeId } });
+        return;
+      }
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) {
+        toast.error("Please sign in to begin this test.");
+        setBusy(false);
+        return;
+      }
+
+      // Check once more for existing active attempt before creating new one
+      const { data: existingActive } = await supabase
+        .from("attempts")
+        .select("id")
+        .eq("test_id", testId)
+        .eq("user_id", u.user.id)
+        .eq("status", "in_progress")
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingActive?.id) {
+        navigate({ to: "/app/attempt/$attemptId", params: { attemptId: existingActive.id } });
+        return;
+      }
+
+      const { data: qs, error: qsErr } = await supabase
+        .from("questions")
+        .select("id")
+        .eq("test_id", testId)
+        .order("order_index", { ascending: true });
+
+      if (qsErr || !qs || qs.length === 0) {
+        toast.error("No questions in this test yet.");
+        setBusy(false);
+        return;
+      }
+
+      const { data: attempt, error: attError } = await supabase
+        .from("attempts")
+        .insert({ test_id: testId, user_id: u.user.id, status: "in_progress" })
+        .select("id")
+        .single();
+
+      if (attError || !attempt) {
+        toast.error(attError?.message ?? "Failed to start test session.");
+        setBusy(false);
+        return;
+      }
+
+      // Insert initial answers in safe batches of 50
+      const rows = qs.map((q: any) => ({
+        attempt_id: attempt.id,
+        question_id: q.id,
+        status: "not_visited" as const,
+      }));
+
+      const BATCH_SIZE = 50;
+      for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+        const batch = rows.slice(i, i + BATCH_SIZE);
+        try {
+          await supabase.from("answers").insert(batch);
+        } catch {
+          // Non-blocking: attempt page will auto-initialize missing answers in memory
+        }
+      }
+
+      navigate({ to: "/app/attempt/$attemptId", params: { attemptId: attempt.id } });
+    } catch (err: any) {
+      console.error("Failed to start attempt:", err);
+      toast.error(err?.message || "Failed to start test. Please try again.");
+      setBusy(false);
+    }
   };
 
-  if (!test) return <div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Loading…</div>;
+  if (loading) {
+    return (
+      <div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">
+        <div className="flex flex-col items-center gap-2.5">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="font-semibold text-foreground text-sm">Loading test instructions…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError || !test) {
+    return (
+      <div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">
+        <div className="max-w-md p-6 rounded-3xl border bg-card text-center space-y-4 shadow-sm">
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-destructive/10 text-destructive">
+            <Info className="h-6 w-6" />
+          </div>
+          <div>
+            <h2 className="font-display font-bold text-base text-foreground">Could not load test</h2>
+            <p className="mt-1 text-xs text-muted-foreground">{loadError || "Test not found."}</p>
+          </div>
+          <div className="flex justify-center gap-2 pt-1">
+            <Button onClick={() => setRetryCount((c) => c + 1)} className="rounded-xl font-bold cursor-pointer">
+              Retry Loading
+            </Button>
+            <Button asChild variant="outline" className="rounded-xl">
+              <Link to="/app/tests">Back to Tests</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">

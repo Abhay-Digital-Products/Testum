@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Search, Loader2, IndianRupee } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/orders")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Admin · Orders  -  Testum" }] }),
   component: AdminOrders,
 });

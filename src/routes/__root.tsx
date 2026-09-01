@@ -46,17 +46,41 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
+
+  const handleRetry = () => {
+    try {
+      router.invalidate();
+      reset();
+    } catch {
+      if (typeof window !== "undefined") {
+        window.location.reload();
+      }
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold">This page didn't load</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Try again or head home.</p>
+        <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-destructive/10 text-destructive">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <h1 className="text-xl font-bold font-display">This page didn't load</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          A temporary network or connection issue occurred. Tap below to reload.
+        </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
-            onClick={() => { router.invalidate(); reset(); }}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-          >Try again</button>
-          <a href="/" className="rounded-md border px-4 py-2 text-sm font-medium">Go home</a>
+            onClick={handleRetry}
+            className="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer"
+          >
+            Try again
+          </button>
+          <a
+            href="/"
+            className="rounded-xl border bg-card px-5 py-2.5 text-sm font-semibold hover:bg-secondary transition-colors"
+          >
+            Go home
+          </a>
         </div>
       </div>
     </div>

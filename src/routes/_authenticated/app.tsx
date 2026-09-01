@@ -12,6 +12,7 @@ import { OfferPopup } from "@/components/offer-popup";
 import { PWAInstallButton } from "@/components/pwa-install-button";
 
 export const Route = createFileRoute("/_authenticated/app")({
+  ssr: false,
   component: AppLayout,
 });
 

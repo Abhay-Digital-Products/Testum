@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle2, Clock, SkipForward, Trophy, XCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/results")({
+  ssr: false,
   head: () => ({ meta: [{ title: "My Results  -  Testum" }] }),
   component: Results,
 });

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Brain, CheckCircle2, ClipboardList, Flame, SkipForward, Target, TrendingUp, Trophy, XCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Dashboard  -  Testum" }] }),
   component: Dashboard,
 });
@@ -222,11 +223,11 @@ function Dashboard() {
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
           {[
-            { t: "Chapter-wise", d: "Master one chapter at a time", to: "/app/tests?tab=chapter" },
-            { t: "Part syllabus", d: "Mid-prep checkpoints", to: "/app/tests?tab=part" },
-            { t: "Full syllabus", d: "180 Q · 180 min mock", to: "/app/tests?tab=full" },
+            { t: "Chapter-wise", d: "Master one chapter at a time", tab: "chapter" },
+            { t: "Part syllabus", d: "Mid-prep checkpoints", tab: "part" },
+            { t: "Full syllabus", d: "180 Q · 180 min mock", tab: "full" },
           ].map((c) => (
-            <Link key={c.t} to="/app/tests" className="rounded-xl border p-4 hover:border-primary hover:shadow-elegant transition">
+            <Link key={c.t} to="/app/tests" search={{ tab: c.tab }} className="rounded-xl border p-4 hover:border-primary hover:shadow-elegant transition cursor-pointer">
               <div className="font-display font-semibold">{c.t}</div>
               <div className="mt-0.5 text-xs text-muted-foreground">{c.d}</div>
             </Link>
